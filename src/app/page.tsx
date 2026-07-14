@@ -21,6 +21,13 @@ type RadarResult = {
   reasons: string[];
 };
 
+type RadarSummary = {
+  totalRaw?: number;
+  totalUnique?: number;
+  itemCount: number;
+  hasItems: boolean;
+};
+
 const fallbackProfiles: ProfileOption[] = [
   {
     id: "romina-remote-spanish-hr",
@@ -104,41 +111,64 @@ function normalizeReasons(value: unknown): string[] {
   return reason ? [reason] : [];
 }
 
-function normalizeResult(value: unknown, index: number): RadarResult | null {
-  if (!isRecord(value)) return null;
+function getRadarItems(payload: unknown): unknown[] | undefined {
+  if (!isRecord(payload) || !Array.isArray(payload.items)) {
+    return undefined;
+  }
 
-  const title = fieldString(value, ["title", "job_title", "name"]);
-  const url = fieldString(value, ["url", "link", "href"]);
+  return payload.items;
+}
+
+function normalizeResult(value: unknown, index: number): RadarResult | null {
+  if (!isRecord(value) || !isRecord(value.candidate) || !isRecord(value.classification)) {
+    return null;
+  }
+
+  const candidate = value.candidate;
+  const classification = value.classification;
+  const title = stringFrom(candidate.title);
+  const url = fieldString(candidate, ["url", "canonical_url"]);
 
   if (!title || !url) return null;
 
   return {
-    id: fieldString(value, ["id"]) ?? `${url}-${index}`,
+    id: fieldString(candidate, ["external_id"]) ?? `${url}-${index}`,
     title,
-    company: fieldString(value, ["company", "organization", "employer"]),
-    location: fieldString(value, ["location", "city", "region"]),
-    score: numberFrom(value.score),
-    verdict: normalizeVerdict(value.verdict),
-    source: fieldString(value, ["source"]) ?? "tavily",
+    company: stringFrom(candidate.company_name),
+    location: stringFrom(candidate.location_text),
+    score: numberFrom(classification.score),
+    verdict: normalizeVerdict(classification.verdict),
+    source: stringFrom(candidate.source) ?? "tavily",
     url,
-    reasons: normalizeReasons(value.reasons ?? value.reason),
+    reasons: normalizeReasons(classification.reasons),
   };
 }
 
 function extractResults(payload: unknown): RadarResult[] {
-  const candidates = Array.isArray(payload)
-    ? payload
-    : isRecord(payload) && Array.isArray(payload.results)
-      ? payload.results
-      : isRecord(payload) && Array.isArray(payload.items)
-        ? payload.items
-        : isRecord(payload) && Array.isArray(payload.data)
-          ? payload.data
-          : [];
+  const items = getRadarItems(payload);
+  if (!items) return [];
 
-  return candidates
+  return items
     .map((item, index) => normalizeResult(item, index))
     .filter((item): item is RadarResult => item !== null);
+}
+
+function extractSummary(payload: unknown): RadarSummary {
+  const items = getRadarItems(payload);
+
+  if (!isRecord(payload)) {
+    return {
+      itemCount: 0,
+      hasItems: false,
+    };
+  }
+
+  return {
+    totalRaw: numberFrom(payload.total_raw),
+    totalUnique: numberFrom(payload.total_unique),
+    itemCount: items?.length ?? 0,
+    hasItems: Boolean(items),
+  };
 }
 
 function extractProfiles(payload: unknown): ProfileOption[] {
@@ -181,6 +211,7 @@ export default function Home() {
   const [selectedProfile, setSelectedProfile] = useState(defaultProfileId);
   const [limit, setLimit] = useState<(typeof limitOptions)[number]>(25);
   const [results, setResults] = useState<RadarResult[]>([]);
+  const [summary, setSummary] = useState<RadarSummary | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,6 +262,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setResults([]);
+    setSummary(null);
 
     if (!apiBaseUrl) {
       setError("Falta configurar NEXT_PUBLIC_API_BASE_URL.");
@@ -255,14 +287,19 @@ export default function Home() {
         throw new Error(`El servidor respondió con estado ${response.status}.`);
       }
 
-      const payload: unknown = await response.json();
-      setResults(extractResults(payload));
+      const data: unknown = await response.json();
+      console.log("Radar response", data);
+      setSummary(extractSummary(data));
+      setResults(extractResults(data));
     } catch (searchError) {
       setError(getErrorMessage(searchError));
     } finally {
       setIsLoading(false);
     }
   }
+
+  const showEmptyState =
+    !isLoading && !error && hasSearched && summary !== null && (!summary.hasItems || summary.itemCount === 0);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -332,11 +369,13 @@ export default function Home() {
             </div>
           ) : null}
 
-          {!isLoading && !error && hasSearched && results.length === 0 ? (
+          {showEmptyState ? (
             <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
               No encontramos oportunidades para este perfil por ahora.
             </div>
           ) : null}
+
+          {summary && summary.itemCount > 0 ? <ResultsSummary summary={summary} /> : null}
 
           {results.length > 0 ? (
             <div className="grid gap-5">
@@ -353,6 +392,25 @@ export default function Home() {
         </section>
       </div>
     </main>
+  );
+}
+
+function ResultsSummary({ summary }: { summary: RadarSummary }) {
+  return (
+    <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm sm:grid-cols-3 sm:p-5">
+      <SummaryItem label="Total crudo" value={summary.totalRaw ?? "-"} />
+      <SummaryItem label="Total único" value={summary.totalUnique ?? "-"} />
+      <SummaryItem label="Resultados" value={summary.itemCount} />
+    </div>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p>
+    </div>
   );
 }
 
