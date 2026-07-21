@@ -28,6 +28,14 @@ type RadarSummary = {
   hasItems: boolean;
 };
 
+type DirectLink = {
+  id: string;
+  title: string;
+  url: string;
+};
+
+type CopyStatus = "idle" | "copied" | "error";
+
 const fallbackProfiles: ProfileOption[] = [
   {
     id: "romina-remote-spanish-hr",
@@ -50,6 +58,12 @@ const verdictLabels: Record<Verdict, string> = {
   promising: "Prometedoras",
   maybe: "Para revisar",
   reject: "Descartadas",
+};
+
+const verdictBadgeLabels: Record<Verdict, string> = {
+  promising: "prometedor",
+  maybe: "para revisar",
+  reject: "descartado",
 };
 
 const verdictStyles: Record<Verdict, string> = {
@@ -111,6 +125,24 @@ function normalizeReasons(value: unknown): string[] {
   return reason ? [reason] : [];
 }
 
+function translateReason(reason: string): string {
+  const translations: Array<[RegExp, string]> = [
+    [/^matches target role terms:\s*/i, "Coincide con términos del rol objetivo: "],
+    [/^matches preferred terms:\s*/i, "Coincide con términos preferidos: "],
+    [/^Mendoza local fit:\s*/i, "Ajuste local en Mendoza: "],
+    [/^remote fit:\s*/i, "Ajuste para trabajo remoto: "],
+    [/^location fit:\s*/i, "Ajuste de ubicación: "],
+  ];
+
+  for (const [pattern, replacement] of translations) {
+    if (pattern.test(reason)) {
+      return reason.replace(pattern, replacement);
+    }
+  }
+
+  return reason;
+}
+
 function getRadarItems(payload: unknown): unknown[] | undefined {
   if (!isRecord(payload) || !Array.isArray(payload.items)) {
     return undefined;
@@ -140,7 +172,7 @@ function normalizeResult(value: unknown, index: number): RadarResult | null {
     verdict: normalizeVerdict(classification.verdict),
     source: stringFrom(candidate.source) ?? "tavily",
     url,
-    reasons: normalizeReasons(classification.reasons),
+    reasons: normalizeReasons(classification.reasons).map(translateReason),
   };
 }
 
@@ -212,6 +244,7 @@ export default function Home() {
   const [limit, setLimit] = useState<(typeof limitOptions)[number]>(25);
   const [results, setResults] = useState<RadarResult[]>([]);
   const [summary, setSummary] = useState<RadarSummary | null>(null);
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +289,16 @@ export default function Home() {
     [results],
   );
 
+  const directLinks = useMemo(
+    () =>
+      results.map((result) => ({
+        id: result.id,
+        title: result.title,
+        url: result.url,
+      })),
+    [results],
+  );
+
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setHasSearched(true);
@@ -263,6 +306,7 @@ export default function Home() {
     setError(null);
     setResults([]);
     setSummary(null);
+    setCopyStatus("idle");
 
     if (!apiBaseUrl) {
       setError("Falta configurar NEXT_PUBLIC_API_BASE_URL.");
@@ -295,6 +339,31 @@ export default function Home() {
       setError(getErrorMessage(searchError));
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleCopyAllLinks() {
+    if (directLinks.length === 0) return;
+
+    const text = directLinks.map((link) => link.url).join("\n");
+
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "true");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
     }
   }
 
@@ -387,6 +456,7 @@ export default function Home() {
                   verdict={verdict}
                 />
               ))}
+              <DirectLinksList links={directLinks} copyStatus={copyStatus} onCopy={handleCopyAllLinks} />
             </div>
           ) : null}
         </section>
@@ -411,6 +481,52 @@ function SummaryItem({ label, value }: { label: string; value: number | string }
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p>
     </div>
+  );
+}
+
+function DirectLinksList({
+  links,
+  copyStatus,
+  onCopy,
+}: {
+  links: DirectLink[];
+  copyStatus: CopyStatus;
+  onCopy: () => void;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Enlaces directos</h2>
+          <p className="mt-1 text-sm text-slate-600">Lista de enlaces para compartir por WhatsApp u otro canal.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {copyStatus === "copied" ? <span className="text-sm font-medium text-emerald-700">Copiado</span> : null}
+          {copyStatus === "error" ? (
+            <span className="text-sm font-medium text-red-700">No se pudo copiar</span>
+          ) : null}
+          <button
+            className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            disabled={links.length === 0}
+            onClick={onCopy}
+            type="button"
+          >
+            Copiar todos
+          </button>
+        </div>
+      </div>
+
+      <ol className="space-y-3 text-sm">
+        {links.map((link, index) => (
+          <li key={link.id} className="rounded-md border border-slate-200 p-3">
+            <p className="font-medium text-slate-950">{index + 1}. {link.title}</p>
+            <a className="mt-1 block text-teal-800 hover:underline" href={link.url} rel="noreferrer" target="_blank">
+              {link.url}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -441,14 +557,14 @@ function ResultGroup({
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${verdictStyles[verdict]}`}>
-                    {result.verdict}
+                    {verdictBadgeLabels[result.verdict]}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                     {result.source}
                   </span>
                   {typeof result.score === "number" ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                      Score {result.score}
+                      Puntaje {result.score}
                     </span>
                   ) : null}
                 </div>
