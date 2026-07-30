@@ -102,6 +102,15 @@ function fieldString(record: Record<string, unknown>, keys: string[]): string | 
   return undefined;
 }
 
+function normalizeApiBaseUrl(value: string | undefined): string {
+  return value?.trim().replace(/\/+$/, "") ?? "";
+}
+
+function buildApiUrl(baseUrl: string, path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}${normalizedPath}`;
+}
+
 function normalizeVerdict(value: unknown): Verdict {
   const verdict = stringFrom(value)?.toLowerCase();
 
@@ -238,7 +247,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function Home() {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
+  const apiBaseUrl = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
   const [profiles, setProfiles] = useState<ProfileOption[]>(fallbackProfiles);
   const [selectedProfile, setSelectedProfile] = useState(defaultProfileId);
   const [limit, setLimit] = useState<(typeof limitOptions)[number]>(25);
@@ -256,7 +265,7 @@ export default function Home() {
 
     async function loadProfiles() {
       try {
-        const response = await fetch(`${apiBaseUrl}/radar/profiles`);
+        const response = await fetch(buildApiUrl(apiBaseUrl, "/radar/profiles"));
         if (!response.ok) return;
 
         const payload: unknown = await response.json();
@@ -315,7 +324,7 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/radar/runs`, {
+      const response = await fetch(buildApiUrl(apiBaseUrl, "/radar/runs"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
