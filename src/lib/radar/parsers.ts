@@ -211,7 +211,7 @@ function parseCandidate(value: unknown, path: string): RadarCandidate {
   const record = requireRecord(value, path);
   return {
     source: requireString(record.source, `${path}.source`),
-    title: requireString(record.title, `${path}.title`),
+    title: optionalString(record.title, `${path}.title`) ?? "Oferta sin título",
     companyName: optionalString(record.company_name, `${path}.company_name`),
     locationText: optionalString(record.location_text, `${path}.location_text`),
     url: optionalHttpUrl(record.url, `${path}.url`),
@@ -336,14 +336,26 @@ export function parseProfiles(value: unknown): ProfileOption[] {
 export function parseRadarRun(value: unknown): RadarRunResponse {
   const record = requireRecord(value, "radar_run");
   const rawItems = requireArray(record.items, "radar_run.items");
-  requireArray(record.excluded_items, "radar_run.excluded_items");
+  const rawExcludedItems = requireArray(
+    record.excluded_items,
+    "radar_run.excluded_items",
+  );
 
   const items: RadarRunItem[] = [];
+  const excludedItems: RadarRunItem[] = [];
   let invalidItemCount = 0;
 
   rawItems.forEach((item, index) => {
     try {
       items.push(parseRunItem(item, `radar_run.items[${index}]`));
+    } catch {
+      invalidItemCount += 1;
+    }
+  });
+
+  rawExcludedItems.forEach((item, index) => {
+    try {
+      excludedItems.push(parseRunItem(item, `radar_run.excluded_items[${index}]`));
     } catch {
       invalidItemCount += 1;
     }
@@ -370,6 +382,7 @@ export function parseRadarRun(value: unknown): RadarRunResponse {
     totalNew: requireNumber(record.total_new, "radar_run.total_new"),
     totalExcluded: requireNumber(record.total_excluded, "radar_run.total_excluded"),
     items,
+    excludedItems,
     sourceSummaries,
     invalidItemCount,
   };
@@ -388,6 +401,10 @@ function parseHistoryEvaluation(value: unknown, path: string): HistoryEvaluation
       record.eligibility_checks,
       `${path}.eligibility_checks`,
     ),
+    reasons:
+      record.reasons === undefined
+        ? []
+        : readStringArray(record.reasons, `${path}.reasons`),
   };
 }
 
@@ -414,7 +431,7 @@ function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportuni
     canonicalUrl: optionalHttpUrl(record.canonical_url, `${path}.canonical_url`),
     sourceKind: requireString(record.source_kind, `${path}.source_kind`),
     sourceDomain: optionalString(record.source_domain, `${path}.source_domain`),
-    title: requireString(record.title, `${path}.title`),
+    title: optionalString(record.title, `${path}.title`) ?? "Oferta sin título",
     companyName: optionalString(record.company_name, `${path}.company_name`),
     locationText: optionalString(record.location_text, `${path}.location_text`),
     facts: parseFacts(record.facts, `${path}.facts`),

@@ -2,7 +2,9 @@ import { FeedbackForm, type FeedbackSaveState } from "./feedback-form";
 import {
   eligibilityCriterionLabels,
   eligibilityStatusLabels,
+  getEvaluationReasons,
   getFactBadges,
+  translateEligibilityReason,
   verdictBadgeLabels,
 } from "@/lib/radar/presentation";
 import type { FeedbackInput, OpportunityCardModel, Verdict } from "@/lib/radar/types";
@@ -24,6 +26,70 @@ const eligibilityStatusStyles = {
   fail: "text-red-700",
   unknown: "text-slate-600",
 } as const;
+
+export function EvaluationDetails({
+  opportunity,
+  summary = "Ver evaluación",
+}: {
+  opportunity: OpportunityCardModel;
+  summary?: string;
+}) {
+  const reasons =
+    opportunity.verdict === "promising" && opportunity.presented !== false
+      ? []
+      : getEvaluationReasons(opportunity);
+
+  if (reasons.length === 0 && opportunity.eligibilityChecks.length === 0) return null;
+
+  return (
+    <details className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+      <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+        {summary}
+      </summary>
+
+      {reasons.length > 0 ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Motivos principales
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+            {reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {opportunity.eligibilityChecks.length > 0 ? (
+        <div className={reasons.length > 0 ? "mt-4 border-t border-slate-200 pt-3" : "mt-3"}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Criterios verificados
+          </p>
+          <ul className="mt-2 space-y-3 text-sm">
+            {opportunity.eligibilityChecks.map((check, index) => {
+              const reason = check.status === "pass" ? undefined : translateEligibilityReason(check);
+              return (
+                <li key={`${check.criterion}-${index}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-slate-700">
+                      {eligibilityCriterionLabels[check.criterion] ?? "Criterio adicional"}
+                    </span>
+                    <span
+                      className={`shrink-0 font-semibold ${eligibilityStatusStyles[check.status]}`}
+                    >
+                      {eligibilityStatusLabels[check.status]}
+                    </span>
+                  </div>
+                  {reason ? <p className="mt-1 text-xs leading-5 text-slate-600">{reason}</p> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </details>
+  );
+}
 
 export function OpportunityCard({
   opportunity,
@@ -84,25 +150,7 @@ export function OpportunityCard({
         </ul>
       ) : null}
 
-      {opportunity.eligibilityChecks.length > 0 ? (
-        <details className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
-            Criterios verificados
-          </summary>
-          <ul className="mt-3 space-y-2 text-sm">
-            {opportunity.eligibilityChecks.map((check, index) => (
-              <li className="flex items-start justify-between gap-3" key={`${check.criterion}-${index}`}>
-                <span className="text-slate-700">
-                  {eligibilityCriterionLabels[check.criterion] ?? "Criterio adicional"}
-                </span>
-                <span className={`shrink-0 font-semibold ${eligibilityStatusStyles[check.status]}`}>
-                  {eligibilityStatusLabels[check.status]}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      <EvaluationDetails opportunity={opportunity} />
 
       <div className="flex flex-wrap gap-3">
         {opportunity.applicationUrl ? (

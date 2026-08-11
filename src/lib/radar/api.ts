@@ -153,10 +153,21 @@ export function getProfiles(signal?: AbortSignal): Promise<ProfileOption[]> {
 
 export function getHistory(
   profileId: string,
-  signal?: AbortSignal,
+  options: {
+    includeExcluded?: boolean;
+    limit?: number;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<HistoryOpportunity[]> {
-  const query = new URLSearchParams({ profile_id: profileId });
-  return requestJson(`/radar/opportunities?${query.toString()}`, parseHistory, { signal });
+  const query = new URLSearchParams({
+    profile_id: profileId,
+    include_excluded: String(options.includeExcluded ?? false),
+  });
+  if (options.limit !== undefined) query.set("limit", String(options.limit));
+
+  return requestJson(`/radar/opportunities?${query.toString()}`, parseHistory, {
+    signal: options.signal,
+  });
 }
 
 export function runRadar(input: {

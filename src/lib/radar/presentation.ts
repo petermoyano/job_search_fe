@@ -1,4 +1,5 @@
 import type {
+  EligibilityCheck,
   FeedbackAction,
   FeedbackReasonCode,
   HistoryOpportunity,
@@ -76,9 +77,119 @@ export const eligibilityStatusLabels = {
   unknown: "No verificado",
 } as const;
 
+const eligibilityReasonLabels: Record<
+  string,
+  Partial<Record<EligibilityCheck["status"], string>>
+> = {
+  role: {
+    fail: "El título no coincide con los roles objetivo del perfil.",
+    unknown: "No se pudo verificar que el puesto corresponda a un rol objetivo.",
+  },
+  role_exclusions: {
+    fail: "El título pertenece a una familia de puestos excluida.",
+    unknown: "No se pudo descartar que pertenezca a una familia de puestos excluida.",
+  },
+  work_modality: {
+    fail: "La vacante no es 100% remota.",
+    unknown: "No se pudo verificar que la modalidad sea 100% remota.",
+  },
+  hiring_geography: {
+    fail: "La vacante restringe la contratación fuera de Argentina o LATAM.",
+    unknown: "No se pudo verificar que contrate personas desde Argentina.",
+  },
+  description_language: {
+    fail: "La descripción no está completamente en español.",
+    unknown: "No se pudo verificar el idioma de la descripción.",
+  },
+  application_language: {
+    fail: "El proceso de postulación no está completamente en español.",
+    unknown: "No se pudo verificar el idioma del proceso de postulación.",
+  },
+  advanced_english: {
+    fail: "La vacante parece exigir inglés avanzado o fluido.",
+    unknown: "No se pudo verificar el nivel de inglés requerido.",
+  },
+  seniority: {
+    fail: "El puesto es junior, inicial, trainee, asistente o pasantía.",
+    unknown: "No se pudo verificar el seniority requerido.",
+  },
+  active_posting: {
+    fail: "La vacante está cerrada o ya no acepta postulaciones.",
+    unknown: "No se pudo verificar que la postulación siga abierta.",
+  },
+};
+
+const classificationReasonLabels: Record<string, string> = {
+  "is a job search/listing page, not an individual vacancy":
+    "Es una página con varias búsquedas o vacantes, no una oferta individual.",
+  "is informational content, not a job vacancy":
+    "Es contenido informativo, no una oferta laboral.",
+  "is an organization homepage, not a job vacancy":
+    "Es la página principal de una organización, no una oferta laboral.",
+  "is discussion content, not a job vacancy":
+    "Es una página de discusión, no una oferta laboral.",
+  "appears to be an expired or closed vacancy":
+    "La vacante parece estar vencida o cerrada.",
+  "could not be verified as an individual job vacancy":
+    "No se pudo verificar que sea una oferta laboral individual.",
+  "is not an eligible job vacancy":
+    "No se pudo validar como una oferta laboral elegible.",
+};
+
+export type ExclusionKind = "already_seen" | "overflow" | "unverified" | "rejected";
+
+export const exclusionKindLabels: Record<ExclusionKind, string> = {
+  already_seen: "Ya presentada",
+  overflow: "Fuera del cupo",
+  unverified: "Falta verificar",
+  rejected: "No cumple",
+};
+
+export function getExclusionKind(model: OpportunityCardModel): ExclusionKind {
+  if (model.isNew === false) return "already_seen";
+  if (model.eligible) return "overflow";
+  if (
+    model.verdict === "reject" ||
+    model.eligibilityChecks.some((check) => check.status === "fail")
+  ) return "rejected";
+  if (
+    model.verdict === "maybe" ||
+    model.eligibilityChecks.some((check) => check.status === "unknown")
+  ) {
+    return "unverified";
+  }
+  return "rejected";
+}
+
+export function translateEligibilityReason(check: EligibilityCheck): string {
+  return eligibilityReasonLabels[check.criterion]?.[check.status] ?? check.reason ?? "";
+}
+
+export function getEvaluationReasons(model: OpportunityCardModel): string[] {
+  if (model.isNew === false) {
+    return ["Esta oportunidad ya había sido presentada anteriormente."];
+  }
+  if (model.eligible && model.presented === false) {
+    return ["Cumplía los criterios, pero quedó fuera del cupo de esta búsqueda."];
+  }
+
+  const decisiveStatus = model.verdict === "reject" ? "fail" : "unknown";
+  const checkReasons = model.eligibilityChecks
+    .filter((check) => check.status === decisiveStatus)
+    .map(translateEligibilityReason)
+    .filter(Boolean);
+  const reasons =
+    checkReasons.length > 0
+      ? checkReasons
+      : model.reasons.map((reason) => classificationReasonLabels[reason] ?? reason);
+
+  return Array.from(new Set(reasons));
+}
+
 export function currentOpportunityToCard(
   item: RadarRunItem,
   profileId: string,
+  presented = true,
 ): OpportunityCardModel {
   const originalUrl = item.candidate.url ?? item.candidate.canonicalUrl;
   return {
@@ -94,6 +205,10 @@ export function currentOpportunityToCard(
     score: item.classification.score,
     roleTier: item.classification.roleTier ?? item.classification.facts.roleTier,
     verdict: item.classification.verdict,
+    eligible: item.classification.eligible,
+    isNew: item.isNew,
+    presented,
+    reasons: item.classification.reasons,
     facts: item.classification.facts,
     eligibilityChecks: item.classification.eligibilityChecks,
     applicationUrl:
@@ -119,6 +234,10 @@ export function historyOpportunityToCard(
     score: item.latestEvaluation?.score,
     roleTier: item.latestEvaluation?.roleTier ?? item.facts.roleTier,
     verdict: item.latestEvaluation?.verdict,
+    eligible: item.latestEvaluation?.eligible,
+    isNew: item.latestEvaluation?.isNew,
+    presented: item.latestEvaluation?.presented,
+    reasons: item.latestEvaluation?.reasons ?? [],
     facts: item.facts,
     eligibilityChecks: item.latestEvaluation?.eligibilityChecks ?? [],
     applicationUrl: item.facts.applicationUrl ?? item.canonicalUrl,

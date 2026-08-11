@@ -1,8 +1,15 @@
-import { OpportunityCard } from "./opportunity-card";
+"use client";
+
+import { useId, useState } from "react";
+import { EvaluationDetails, OpportunityCard } from "./opportunity-card";
 import type { FeedbackSaveState } from "./feedback-form";
 import {
+  exclusionKindLabels,
+  getEvaluationReasons,
+  getExclusionKind,
   historyOpportunityToCard,
   translateStopReason,
+  type ExclusionKind,
 } from "@/lib/radar/presentation";
 import type {
   FeedbackInput,
@@ -20,6 +27,7 @@ export type DirectLink = {
 };
 
 export type CopyStatus = "idle" | "copied" | "error";
+export type HistoryView = "presented" | "excluded";
 
 type SaveStateMap = Record<string, FeedbackSaveState>;
 
@@ -36,10 +44,10 @@ export function ResultsSummary({ run }: { run: RadarRunResponse }) {
   return (
     <section aria-label="Resumen de la búsqueda" className="border-y border-slate-200 bg-white py-5">
       <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
-        <SummaryItem label="Oportunidades nuevas mostradas" value={run.items.length} />
-        <SummaryItem label="Nuevas encontradas" value={run.totalNew} />
+        <SummaryItem label="Mostradas" value={run.items.length} />
+        <SummaryItem label="Nuevas válidas" value={run.totalNew} />
         <SummaryItem label="Coincidencias válidas" value={run.totalQualified} />
-        <SummaryItem label="Resultados filtrados" value={run.totalExcluded} />
+        <SummaryItem label="No mostradas" value={run.totalExcluded} />
         <SummaryItem label="Fuentes consultadas" value={run.sourceSummaries.length} />
       </div>
 
@@ -159,12 +167,139 @@ function slugify(value: string): string {
   return value.toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, "-");
 }
 
+const exclusionKindStyles: Record<ExclusionKind, string> = {
+  already_seen: "border-sky-200 bg-sky-50 text-sky-800",
+  overflow: "border-indigo-200 bg-indigo-50 text-indigo-800",
+  unverified: "border-amber-200 bg-amber-50 text-amber-900",
+  rejected: "border-slate-200 bg-slate-100 text-slate-700",
+};
+
+export function ExcludedResultsPanel({
+  opportunities,
+  initiallyOpen,
+}: {
+  opportunities: OpportunityCardModel[];
+  initiallyOpen: boolean;
+}) {
+  const contentId = useId();
+  const [isOpen, setIsOpen] = useState(initiallyOpen);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const visibleOpportunities = opportunities.slice(0, visibleCount);
+  const remainingCount = opportunities.length - visibleOpportunities.length;
+
+  if (opportunities.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-slate-300 bg-white" id="excluded-results">
+      <button
+        aria-controls={contentId}
+        aria-expanded={isOpen}
+        className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left sm:px-5"
+        onClick={() => setIsOpen((value) => !value)}
+        type="button"
+      >
+        <span>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-lg font-semibold text-slate-950">Resultados no mostrados</span>
+            <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-sm font-semibold text-slate-700">
+              {opportunities.length}
+            </span>
+          </span>
+          <span className="mt-1 block text-sm leading-5 text-slate-600">
+            Incluye ofertas que no cumplieron algún criterio, no pudieron verificarse, ya habían sido vistas o quedaron fuera del cupo.
+          </span>
+        </span>
+        <span aria-hidden="true" className="mt-0.5 text-xl text-slate-500">
+          {isOpen ? "−" : "+"}
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="border-t border-slate-200" id={contentId}>
+          <ol className="divide-y divide-slate-200">
+            {visibleOpportunities.map((opportunity) => (
+              <ExcludedOpportunityRow key={opportunity.id} opportunity={opportunity} />
+            ))}
+          </ol>
+
+          {remainingCount > 0 ? (
+            <div className="border-t border-slate-200 px-4 py-3 sm:px-5">
+              <button
+                className="min-h-10 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                onClick={() => setVisibleCount((count) => count + 10)}
+                type="button"
+              >
+                Mostrar {Math.min(10, remainingCount)} más
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ExcludedOpportunityRow({ opportunity }: { opportunity: OpportunityCardModel }) {
+  const exclusionKind = getExclusionKind(opportunity);
+  const reasons = getEvaluationReasons(opportunity).slice(0, 2);
+  const link = opportunity.originalUrl ?? opportunity.applicationUrl;
+
+  return (
+    <li className="px-4 py-4 sm:px-5">
+      <article className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${exclusionKindStyles[exclusionKind]}`}
+            >
+              {exclusionKindLabels[exclusionKind]}
+            </span>
+            <span className="text-xs font-medium text-slate-500">{opportunity.sourceLabel}</span>
+          </div>
+          <h3 className="mt-2 font-semibold text-slate-950">{opportunity.title}</h3>
+          {opportunity.companyName || opportunity.locationText ? (
+            <p className="mt-1 text-sm text-slate-600">
+              {[opportunity.companyName, opportunity.locationText].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+          {reasons.length > 0 ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="mt-3 max-w-2xl">
+            <EvaluationDetails opportunity={opportunity} summary="Ver evaluación completa" />
+          </div>
+        </div>
+
+        {link ? (
+          <a
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
+            href={link}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Abrir oferta
+          </a>
+        ) : (
+          <span className="text-sm font-medium text-amber-800">Enlace no disponible</span>
+        )}
+      </article>
+    </li>
+  );
+}
+
 export function HistoryPanel({
   isOpen,
   onToggle,
   isLoading,
   error,
-  history,
+  presentedHistory,
+  excludedHistory,
+  historyView,
+  onHistoryViewChange,
   selectedProfileId,
   currentOpportunityIds,
   saveStates,
@@ -175,14 +310,24 @@ export function HistoryPanel({
   onToggle: () => void;
   isLoading: boolean;
   error: RequestError | null;
-  history: HistoryOpportunity[] | null;
+  presentedHistory: HistoryOpportunity[] | null;
+  excludedHistory: HistoryOpportunity[] | null;
+  historyView: HistoryView;
+  onHistoryViewChange: (view: HistoryView) => void;
   selectedProfileId: string;
   currentOpportunityIds: Set<string>;
   saveStates: SaveStateMap;
   onRefresh: () => void;
   onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
 }) {
-  const visibleHistory = (history ?? []).filter((item) => !currentOpportunityIds.has(item.id));
+  const historyIsLoaded = presentedHistory !== null && excludedHistory !== null;
+  const selectedHistory =
+    historyView === "presented" ? presentedHistory ?? [] : excludedHistory ?? [];
+  const visibleHistory = selectedHistory.filter((item) => !currentOpportunityIds.has(item.id));
+  const emptyMessage =
+    historyView === "presented"
+      ? "Todavía no hay oportunidades presentadas en el historial de este perfil."
+      : "Todavía no hay resultados no mostrados en el historial de este perfil.";
 
   return (
     <section aria-labelledby="history-heading" className="border-t border-slate-200 pt-5">
@@ -198,7 +343,7 @@ export function HistoryPanel({
             Historial
           </span>
           <span className="mt-1 block text-sm text-slate-600">
-            Oportunidades presentadas anteriormente para este perfil.
+            Consulta oportunidades presentadas y resultados no mostrados de búsquedas anteriores.
           </span>
         </span>
         <span aria-hidden="true" className="text-xl text-slate-500">
@@ -208,7 +353,24 @@ export function HistoryPanel({
 
       {isOpen ? (
         <div className="mt-5 space-y-4" id="history-content">
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              aria-label="Tipo de historial"
+              className="inline-flex w-fit rounded-md border border-slate-300 bg-slate-100 p-1"
+            >
+              <HistoryViewButton
+                count={presentedHistory?.length ?? 0}
+                isActive={historyView === "presented"}
+                label="Presentadas"
+                onClick={() => onHistoryViewChange("presented")}
+              />
+              <HistoryViewButton
+                count={excludedHistory?.length ?? 0}
+                isActive={historyView === "excluded"}
+                label="No mostradas"
+                onClick={() => onHistoryViewChange("excluded")}
+              />
+            </div>
             <button
               className="min-h-10 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
               disabled={isLoading}
@@ -221,21 +383,21 @@ export function HistoryPanel({
 
           {error ? <ErrorNotice error={error} /> : null}
 
-          {isLoading && history === null ? (
+          {isLoading && !historyIsLoaded ? (
             <p className="border-y border-slate-200 bg-white px-4 py-5 text-sm text-slate-600" role="status">
               Cargando historial…
             </p>
           ) : null}
 
-          {!isLoading && !error && history?.length === 0 ? (
+          {!isLoading && !error && historyIsLoaded && selectedHistory.length === 0 ? (
             <p className="border-y border-slate-200 bg-white px-4 py-5 text-sm text-slate-600">
-              Todavía no hay oportunidades presentadas en el historial de este perfil.
+              {emptyMessage}
             </p>
           ) : null}
 
-          {!isLoading && !error && history && history.length > 0 && visibleHistory.length === 0 ? (
+          {!isLoading && !error && selectedHistory.length > 0 && visibleHistory.length === 0 ? (
             <p className="border-y border-slate-200 bg-white px-4 py-5 text-sm text-slate-600">
-              Las oportunidades del historial ya aparecen en los resultados actuales.
+              Estas oportunidades ya aparecen en los resultados actuales.
             </p>
           ) : null}
 
@@ -257,6 +419,31 @@ export function HistoryPanel({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function HistoryViewButton({
+  label,
+  count,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={isActive}
+      className={`min-h-9 rounded px-3 py-1.5 text-sm font-semibold transition ${
+        isActive ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {label} ({count})
+    </button>
   );
 }
 

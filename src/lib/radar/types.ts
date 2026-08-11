@@ -108,6 +108,7 @@ export type RadarRunResponse = {
   totalNew: number;
   totalExcluded: number;
   items: RadarRunItem[];
+  excludedItems: RadarRunItem[];
   sourceSummaries: SourceSummary[];
   invalidItemCount: number;
 };
@@ -120,6 +121,7 @@ export type HistoryEvaluation = {
   score: number;
   roleTier?: number;
   eligibilityChecks: EligibilityCheck[];
+  reasons: string[];
 };
 
 export type HistoryOpportunity = {
@@ -156,6 +158,10 @@ export type OpportunityCardModel = {
   score?: number;
   roleTier?: number;
   verdict?: Verdict;
+  eligible?: boolean;
+  isNew?: boolean;
+  presented?: boolean;
+  reasons: string[];
   facts: OpportunityFacts;
   eligibilityChecks: EligibilityCheck[];
   applicationUrl?: string;

@@ -5,11 +5,13 @@ import type { FeedbackSaveState } from "./feedback-form";
 import {
   DirectLinksList,
   ErrorNotice,
+  ExcludedResultsPanel,
   HistoryPanel,
   OpportunityGroup,
   ResultsSummary,
   SourcesConsulted,
   type CopyStatus,
+  type HistoryView,
 } from "./results-view";
 import {
   getHistory,
@@ -72,11 +74,13 @@ export function JobRadar() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<RequestError | null>(null);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
-  const [history, setHistory] = useState<HistoryOpportunity[] | null>(null);
+  const [presentedHistory, setPresentedHistory] = useState<HistoryOpportunity[] | null>(null);
+  const [excludedHistory, setExcludedHistory] = useState<HistoryOpportunity[] | null>(null);
   const [historyError, setHistoryError] = useState<RequestError | null>(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyView, setHistoryView] = useState<HistoryView>("presented");
   const [feedbackSaveStates, setFeedbackSaveStates] = useState<
     Record<string, FeedbackSaveState>
   >({});
@@ -106,9 +110,22 @@ export function JobRadar() {
     setIsHistoryLoading(true);
     setHistoryError(null);
 
-    getHistory(selectedProfile, controller.signal)
-      .then((items) => {
-        setHistory(items);
+    Promise.all([
+      getHistory(selectedProfile, {
+        limit: 200,
+        signal: controller.signal,
+      }),
+      getHistory(selectedProfile, {
+        includeExcluded: true,
+        limit: 200,
+        signal: controller.signal,
+      }),
+    ])
+      .then(([presentedItems, allItems]) => {
+        setPresentedHistory(presentedItems);
+        setExcludedHistory(
+          allItems.filter((item) => item.latestEvaluation?.presented === false),
+        );
         setHistoryError(null);
       })
       .catch((error: unknown) => {
@@ -132,13 +149,28 @@ export function JobRadar() {
   }, [currentRun, isPrimaryProfile]);
 
   const currentCards = useMemo(
-    () => visibleItems.map((item) => currentOpportunityToCard(item, currentRun?.profileId ?? selectedProfile)),
+    () =>
+      visibleItems.map((item) =>
+        currentOpportunityToCard(item, currentRun?.profileId ?? selectedProfile),
+      ),
     [currentRun?.profileId, selectedProfile, visibleItems],
   );
 
+  const excludedCards = useMemo(
+    () =>
+      (currentRun?.excludedItems ?? []).map((item) =>
+        currentOpportunityToCard(
+          item,
+          currentRun?.profileId ?? selectedProfile,
+          false,
+        ),
+      ),
+    [currentRun?.excludedItems, currentRun?.profileId, selectedProfile],
+  );
+
   const currentOpportunityIds = useMemo(
-    () => new Set(currentCards.map((item) => item.id)),
-    [currentCards],
+    () => new Set([...currentCards, ...excludedCards].map((item) => item.id)),
+    [currentCards, excludedCards],
   );
 
   const groupedCards = useMemo(
@@ -175,8 +207,10 @@ export function JobRadar() {
     setHasSearched(false);
     setSearchError(null);
     setCopyStatus("idle");
-    setHistory(null);
+    setPresentedHistory(null);
+    setExcludedHistory(null);
     setHistoryError(null);
+    setHistoryView("presented");
     setFeedbackSaveStates({});
   }
 
@@ -230,10 +264,20 @@ export function JobRadar() {
                   ? { ...item, feedback: savedFeedback }
                   : item,
               ),
+              excludedItems: run.excludedItems.map((item) =>
+                item.opportunityId === opportunityId
+                  ? { ...item, feedback: savedFeedback }
+                  : item,
+              ),
             }
           : run,
       );
-      setHistory((items) =>
+      setPresentedHistory((items) =>
+        items?.map((item) =>
+          item.id === opportunityId ? { ...item, feedback: savedFeedback } : item,
+        ) ?? null,
+      );
+      setExcludedHistory((items) =>
         items?.map((item) =>
           item.id === opportunityId ? { ...item, feedback: savedFeedback } : item,
         ) ?? null,
@@ -385,9 +429,14 @@ export function JobRadar() {
             ) : null}
 
             {currentCards.length === 0 ? (
-              <p className="border-y border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                {emptySearchMessage(currentRun)}
-              </p>
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-5 text-sm text-amber-950">
+                <p className="font-semibold">{emptySearchMessage(currentRun)}</p>
+                {excludedCards.length > 0 ? (
+                  <p className="mt-1 leading-6">
+                    Puedes revisar los {excludedCards.length} resultados no mostrados y abrir sus enlaces a continuación.
+                  </p>
+                ) : null}
+              </div>
             ) : isPrimaryProfile ? (
               <OpportunityGroup
                 onSaveFeedback={handleSaveFeedback}
@@ -409,6 +458,12 @@ export function JobRadar() {
               </div>
             )}
 
+            <ExcludedResultsPanel
+              key={currentRun.runId}
+              initiallyOpen={currentCards.length === 0}
+              opportunities={excludedCards}
+            />
+
             <SourcesConsulted sources={currentRun.sourceSummaries} />
           </div>
         ) : null}
@@ -420,9 +475,12 @@ export function JobRadar() {
         <HistoryPanel
           currentOpportunityIds={currentOpportunityIds}
           error={historyError}
-          history={history}
+          excludedHistory={excludedHistory}
+          presentedHistory={presentedHistory}
+          historyView={historyView}
           isLoading={isHistoryLoading}
           isOpen={isHistoryOpen}
+          onHistoryViewChange={setHistoryView}
           onRefresh={() => setHistoryRefreshKey((value) => value + 1)}
           onSaveFeedback={handleSaveFeedback}
           onToggle={() => setIsHistoryOpen((value) => !value)}
