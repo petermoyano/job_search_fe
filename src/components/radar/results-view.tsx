@@ -270,7 +270,7 @@ function ExcludedOpportunityRow({ opportunity }: { opportunity: OpportunityCardM
             </ul>
           ) : null}
           <div className="mt-3 max-w-2xl">
-            <EvaluationDetails opportunity={opportunity} summary="Ver evaluación completa" />
+            <EvaluationDetails opportunity={opportunity} />
           </div>
         </div>
 

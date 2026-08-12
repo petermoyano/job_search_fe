@@ -409,11 +409,22 @@ export function JobRadar() {
             )}
 
             <button
-              className="h-11 rounded-md bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              aria-busy={isSearching}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-teal-700 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               disabled={isSearching}
               type="submit"
             >
-              {isSearching ? "Buscando…" : "Buscar oportunidades"}
+              {isSearching ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white motion-safe:animate-spin"
+                  />
+                  <span>Buscando…</span>
+                </>
+              ) : (
+                "Buscar oportunidades"
+              )}
             </button>
           </form>
 
