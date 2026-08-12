@@ -29,6 +29,68 @@ export type ProfileSource = {
   order: number;
 };
 
+export type RoleTierConfig = {
+  tier: number;
+  label: string;
+  titles: string[];
+};
+
+export type SearchSourceConfig = {
+  id: string;
+  label: string;
+  domains: string[];
+  order: number;
+  primary: boolean;
+  max_results: number;
+  min_qualified_to_stop: number;
+  enabled: boolean;
+};
+
+export type EligibilityPolicyConfig = {
+  require_fully_remote: boolean;
+  eligible_remote_regions: string[];
+  allowed_hybrid_locations: string[];
+  required_description_language?: string | null;
+  require_spanish_application: boolean;
+  reject_advanced_english: boolean;
+  rejected_seniority_terms: string[];
+  excluded_role_terms: string[];
+  require_active_posting: boolean;
+  minimum_salary_usd_monthly?: number | null;
+};
+
+export type RadarProfileConfig = {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  candidate_summary?: string | null;
+  target_roles: string[];
+  role_tiers: RoleTierConfig[];
+  location_policy: string;
+  eligibility_policy?: EligibilityPolicyConfig | null;
+  required_terms: string[];
+  preferred_terms: string[];
+  reject_terms: string[];
+  positive_scoring_groups: unknown[];
+  negative_scoring_groups: unknown[];
+  source_references: string[];
+  preferred_source_domains: string[];
+  excluded_source_domains: string[];
+  ordered_sources: SearchSourceConfig[];
+  queries: unknown[];
+  max_results_per_query: number;
+  max_qualified_results: number;
+};
+
+export type ProfileConfigDocument = {
+  profile: RadarProfileConfig;
+  revision: number;
+  persisted: boolean;
+};
+
 export type CandidateMetadata = {
   sourceId?: string;
   sourceLabel?: string;

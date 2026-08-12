@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { FeedbackSaveState } from "./feedback-form";
 import {
@@ -354,7 +355,12 @@ export function JobRadar() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-6 sm:px-6 lg:px-8">
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-col gap-2">
-            <p className="text-sm font-medium uppercase text-teal-700">Job Radar</p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-medium uppercase text-teal-700">Job Radar</p>
+              <Link className="text-sm font-semibold text-teal-700 underline" href="/perfil">
+                Editar perfil
+              </Link>
+            </div>
             <h1 className="text-2xl font-semibold text-slate-950 sm:text-3xl">
               Búsqueda manual de oportunidades
             </h1>

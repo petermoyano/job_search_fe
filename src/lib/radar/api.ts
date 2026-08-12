@@ -1,6 +1,7 @@
 import {
   parseFeedbackResponse,
   parseHistory,
+  parseProfileConfigDocument,
   parseProfiles,
   parseRadarRun,
 } from "./parsers";
@@ -8,7 +9,9 @@ import type {
   FeedbackInput,
   HistoryOpportunity,
   OpportunityFeedback,
+  ProfileConfigDocument,
   ProfileOption,
+  RadarProfileConfig,
   RadarRunResponse,
   RequestError,
 } from "./types";
@@ -149,6 +152,35 @@ export function toRequestError(error: unknown, fallback: string): RequestError {
 
 export function getProfiles(signal?: AbortSignal): Promise<ProfileOption[]> {
   return requestJson("/radar/profiles", parseProfiles, { signal });
+}
+
+export function getProfileConfig(
+  profileId: string,
+  signal?: AbortSignal,
+): Promise<ProfileConfigDocument> {
+  return requestJson(
+    `/radar/profiles/${encodeURIComponent(profileId)}/config`,
+    parseProfileConfigDocument,
+    { signal },
+  );
+}
+
+export function updateProfileConfig(input: {
+  profileId: string;
+  expectedRevision: number;
+  profile: RadarProfileConfig;
+}): Promise<ProfileConfigDocument> {
+  return requestJson(
+    `/radar/profiles/${encodeURIComponent(input.profileId)}/config`,
+    parseProfileConfigDocument,
+    {
+      method: "PUT",
+      body: {
+        expected_revision: input.expectedRevision,
+        profile: input.profile,
+      },
+    },
+  );
 }
 
 export function getHistory(

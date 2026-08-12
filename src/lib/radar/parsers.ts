@@ -8,7 +8,9 @@ import type {
   HistoryOpportunity,
   OpportunityFacts,
   OpportunityFeedback,
+  ProfileConfigDocument,
   ProfileOption,
+  RadarProfileConfig,
   ProfileSource,
   RadarCandidate,
   RadarClassification,
@@ -305,6 +307,7 @@ function parseProfileSources(value: unknown, path: string): ProfileSource[] {
     .flatMap((item, index) => {
       try {
         const record = requireRecord(item, `${path}[${index}]`);
+        if (record.enabled === false) return [];
         return [{
           id: requireString(record.id, `${path}[${index}].id`),
           label: requireString(record.label, `${path}[${index}].label`),
@@ -355,6 +358,29 @@ export function parseProfiles(value: unknown): ProfileOption[] {
       return [];
     }
   });
+}
+
+export function parseProfileConfigDocument(value: unknown): ProfileConfigDocument {
+  const record = requireRecord(value, "profile_config");
+  const rawProfile = requireRecord(record.profile, "profile_config.profile");
+  const policy = requireRecord(
+    rawProfile.eligibility_policy,
+    "profile_config.profile.eligibility_policy",
+  );
+
+  const profile = rawProfile as unknown as RadarProfileConfig;
+  if (!Array.isArray(profile.role_tiers) || !Array.isArray(profile.ordered_sources)) {
+    throw new RadarContractError("El perfil editable está incompleto.");
+  }
+  if (!Array.isArray(policy.excluded_role_terms)) {
+    throw new RadarContractError("La política de exclusiones está incompleta.");
+  }
+
+  return {
+    profile,
+    revision: requireNumber(record.revision, "profile_config.revision"),
+    persisted: requireBoolean(record.persisted, "profile_config.persisted"),
+  };
 }
 
 export function parseRadarRun(value: unknown): RadarRunResponse {
