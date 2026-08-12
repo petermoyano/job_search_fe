@@ -9,6 +9,7 @@ import type {
   OpportunityFacts,
   OpportunityFeedback,
   ProfileOption,
+  ProfileSource,
   RadarCandidate,
   RadarClassification,
   RadarRunItem,
@@ -297,6 +298,25 @@ function parseSourceSummary(value: unknown, path: string): SourceSummary {
   };
 }
 
+function parseProfileSources(value: unknown, path: string): ProfileSource[] {
+  if (value === undefined || value === null) return [];
+
+  return requireArray(value, path)
+    .flatMap((item, index) => {
+      try {
+        const record = requireRecord(item, `${path}[${index}]`);
+        return [{
+          id: requireString(record.id, `${path}[${index}].id`),
+          label: requireString(record.label, `${path}[${index}].label`),
+          order: requireNumber(record.order, `${path}[${index}].order`),
+        }];
+      } catch {
+        return [];
+      }
+    })
+    .sort((left, right) => left.order - right.order);
+}
+
 export function parseProfiles(value: unknown): ProfileOption[] {
   const records = Array.isArray(value)
     ? value
@@ -308,11 +328,11 @@ export function parseProfiles(value: unknown): ProfileOption[] {
     throw new RadarContractError("La respuesta de perfiles debe ser una lista.");
   }
 
-  return records.flatMap((item, index) => {
+  return records.flatMap<ProfileOption>((item, index) => {
     try {
       if (typeof item === "string") {
         const id = requireString(item, `profiles[${index}]`);
-        return [{ id, label: id }];
+        return [{ id, label: id, orderedSources: [] }];
       }
 
       const record = requireRecord(item, `profiles[${index}]`);
@@ -324,6 +344,10 @@ export function parseProfiles(value: unknown): ProfileOption[] {
           maxQualifiedResults: optionalNumber(
             record.max_qualified_results,
             `profiles[${index}].max_qualified_results`,
+          ),
+          orderedSources: parseProfileSources(
+            record.ordered_sources,
+            `profiles[${index}].ordered_sources`,
           ),
         },
       ];

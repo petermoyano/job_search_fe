@@ -3,13 +3,16 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { FeedbackSaveState } from "./feedback-form";
 import {
+  SearchActivityPanel,
+  type SearchActivityStatus,
+} from "./search-activity-panel";
+import {
   DirectLinksList,
   ErrorNotice,
   ExcludedResultsPanel,
   HistoryPanel,
   OpportunityGroup,
   ResultsSummary,
-  SourcesConsulted,
   type CopyStatus,
   type HistoryView,
 } from "./results-view";
@@ -73,6 +76,10 @@ export function JobRadar() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<RequestError | null>(null);
+  const [searchTiming, setSearchTiming] = useState<{
+    startedAt: number;
+    finishedAt?: number;
+  } | null>(null);
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [presentedHistory, setPresentedHistory] = useState<HistoryOpportunity[] | null>(null);
   const [excludedHistory, setExcludedHistory] = useState<HistoryOpportunity[] | null>(null);
@@ -86,6 +93,20 @@ export function JobRadar() {
   >({});
 
   const isPrimaryProfile = selectedProfile === primaryProfileId;
+  const selectedProfileOption = useMemo(
+    () => profiles.find((profile) => profile.id === selectedProfile),
+    [profiles, selectedProfile],
+  );
+  const plannedSources = selectedProfileOption?.orderedSources ?? [];
+  const maxResults =
+    selectedProfileOption?.maxQualifiedResults ?? (isPrimaryProfile ? 5 : limit);
+  const searchActivityStatus: SearchActivityStatus | null = isSearching
+    ? "searching"
+    : currentRun
+      ? "completed"
+      : searchError && searchTiming
+        ? "failed"
+        : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -206,6 +227,7 @@ export function JobRadar() {
     setCurrentRun(null);
     setHasSearched(false);
     setSearchError(null);
+    setSearchTiming(null);
     setCopyStatus("idle");
     setPresentedHistory(null);
     setExcludedHistory(null);
@@ -222,6 +244,7 @@ export function JobRadar() {
     setIsSearching(true);
     setSearchError(null);
     setCurrentRun(null);
+    setSearchTiming({ startedAt: Date.now() });
     setCopyStatus("idle");
 
     try {
@@ -243,6 +266,9 @@ export function JobRadar() {
       setSearchError(toRequestError(error, "No pudimos completar la búsqueda."));
     } finally {
       setIsSearching(false);
+      setSearchTiming((timing) =>
+        timing ? { ...timing, finishedAt: Date.now() } : timing,
+      );
     }
   }
 
@@ -399,14 +425,15 @@ export function JobRadar() {
           ) : null}
         </section>
 
-        {isSearching ? (
-          <div
-            aria-live="polite"
-            className="rounded-md border border-teal-200 bg-teal-50 p-5 text-sm font-medium text-teal-950"
-            role="status"
-          >
-            Buscando y verificando vacantes… Esto puede tardar algunos minutos.
-          </div>
+        {searchTiming && searchActivityStatus ? (
+          <SearchActivityPanel
+            finishedAt={searchTiming.finishedAt}
+            maxResults={maxResults}
+            plannedSources={plannedSources}
+            run={currentRun ?? undefined}
+            startedAt={searchTiming.startedAt}
+            status={searchActivityStatus}
+          />
         ) : null}
 
         {searchError ? (
@@ -463,8 +490,6 @@ export function JobRadar() {
               initiallyOpen={currentCards.length === 0}
               opportunities={excludedCards}
             />
-
-            <SourcesConsulted sources={currentRun.sourceSummaries} />
           </div>
         ) : null}
 

@@ -11,14 +11,16 @@ import type {
 export const primaryProfileId = "romina-remote-spanish-hr";
 
 export const fallbackProfiles = [
-  { id: primaryProfileId, label: "Romina - RRHH remoto en español" },
+  { id: primaryProfileId, label: "Romina - RRHH remoto en español", orderedSources: [] },
   {
     id: "romina-mendoza-hr-onsite-hybrid",
     label: "Romina - RRHH Mendoza presencial/híbrido",
+    orderedSources: [],
   },
   {
     id: "peter-latam-remote-ai-fullstack-product",
     label: "Peter - AI/fullstack/product remoto LATAM",
+    orderedSources: [],
   },
 ];
 

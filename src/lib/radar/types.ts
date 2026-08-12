@@ -20,6 +20,13 @@ export type ProfileOption = {
   id: string;
   label: string;
   maxQualifiedResults?: number;
+  orderedSources: ProfileSource[];
+};
+
+export type ProfileSource = {
+  id: string;
+  label: string;
+  order: number;
 };
 
 export type CandidateMetadata = {
