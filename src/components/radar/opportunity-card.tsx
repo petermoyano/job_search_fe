@@ -127,7 +127,18 @@ export function OpportunityCard({
 
       <div>
         <h3 className="text-base font-semibold leading-6 text-slate-950 sm:text-lg">
-          {opportunity.title}
+          {opportunity.applicationUrl ? (
+            <a
+              className="cursor-pointer transition hover:text-teal-700 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+              href={opportunity.applicationUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {opportunity.title}
+            </a>
+          ) : (
+            opportunity.title
+          )}
         </h3>
         {opportunity.companyName || opportunity.locationText ? (
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
@@ -152,33 +163,26 @@ export function OpportunityCard({
 
       <EvaluationDetails opportunity={opportunity} />
 
-      <div className="flex flex-wrap gap-3">
-        {opportunity.applicationUrl ? (
-          <a
-            className="inline-flex min-h-10 items-center rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
-            href={opportunity.applicationUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Postularme
-          </a>
-        ) : (
-          <span className="text-sm font-medium text-amber-800">
-            No hay un enlace de postulación verificado.
-          </span>
-        )}
+      {!opportunity.applicationUrl || hasSeparateOriginalUrl ? (
+        <div className="flex flex-wrap gap-3">
+          {!opportunity.applicationUrl ? (
+            <span className="text-sm font-medium text-amber-800">
+              No hay un enlace de postulación verificado.
+            </span>
+          ) : null}
 
-        {hasSeparateOriginalUrl ? (
-          <a
-            className="inline-flex min-h-10 items-center rounded-md border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
-            href={opportunity.originalUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Abrir oferta
-          </a>
-        ) : null}
-      </div>
+          {hasSeparateOriginalUrl ? (
+            <a
+              className="inline-flex min-h-10 items-center rounded-md border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
+              href={opportunity.originalUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Abrir oferta
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-auto">
         <FeedbackForm
