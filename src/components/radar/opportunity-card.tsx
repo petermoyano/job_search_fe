@@ -132,9 +132,20 @@ export function OpportunityCard({
             {verdictBadgeLabels[opportunity.verdict]}
           </span>
         ) : null}
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-          {opportunity.sourceLabel}
-        </span>
+        {opportunity.sourceAttributionUrl ? (
+          <a
+            className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-teal-700 hover:underline"
+            href={opportunity.sourceAttributionUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Fuente: {opportunity.sourceLabel}
+          </a>
+        ) : (
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+            Fuente: {opportunity.sourceLabel}
+          </span>
+        )}
         {typeof opportunity.score === "number" ? (
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
             Puntaje {opportunity.score}

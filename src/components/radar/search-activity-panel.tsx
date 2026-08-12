@@ -255,12 +255,19 @@ function CompletedActivity({
               return (
                 <li className="py-3 first:pt-0 last:pb-0" key={source.sourceId}>
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <span className="text-sm font-semibold text-slate-900">{source.sourceLabel}</span>
+                    <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+                      {source.sourceLabel}
+                      <span className={source.status === "failed" ? "text-red-700" : "text-emerald-700"}>
+                        {source.status === "failed" ? "Falló" : "Completada"}
+                      </span>
+                    </span>
                     {stopReason ? <span className="text-xs text-slate-500">{stopReason}</span> : null}
                   </div>
                   <p className="mt-1 text-xs text-slate-600">
-                    {source.rawCount} encontrados · {source.uniqueCount} únicos ·{" "}
-                    {source.qualifiedCount} válidos · {source.newQualifiedCount} nuevos
+                    {source.status === "failed"
+                      ? `Error: ${source.errorCode ?? "proveedor no disponible"}`
+                      : `${source.rawCount} encontrados · ${source.uniqueCount} únicos · ${source.qualifiedCount} válidos · ${source.newQualifiedCount} nuevos`}
+                    {` · ${source.durationMs} ms`}
                   </p>
                 </li>
               );

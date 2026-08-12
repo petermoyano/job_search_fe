@@ -7,6 +7,7 @@ import {
   toRequestError,
   updateProfileConfig,
 } from "@/lib/radar/api";
+import { acquisitionModeLabels } from "@/lib/radar/presentation";
 import type {
   ProfileConfigDocument,
   RadarProfileConfig,
@@ -142,6 +143,8 @@ export function ProfileEditor() {
           max_results: 5,
           min_qualified_to_stop: 3,
           enabled: true,
+          acquisition_mode: "web_search",
+          attribution_url: `https://${domain}`,
         },
       ],
       source_references: Array.from(
@@ -318,7 +321,12 @@ export function ProfileEditor() {
                     type="checkbox"
                   />
                   <span>
-                    <span className="font-semibold">{source.label}</span>
+                    <span className="flex flex-wrap items-center gap-2 font-semibold">
+                      {source.label}
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                        {acquisitionModeLabels[source.acquisition_mode ?? "web_search"]}
+                      </span>
+                    </span>
                     <span className="block break-all text-slate-500">{source.domains.join(", ")}</span>
                   </span>
                 </label>

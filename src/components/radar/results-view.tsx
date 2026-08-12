@@ -1,15 +1,11 @@
 "use client";
 
 import { useId, useState } from "react";
-import { EvaluationDetails, OpportunityCard } from "./opportunity-card";
+import { OpportunityCard } from "./opportunity-card";
 import type { FeedbackSaveState } from "./feedback-form";
 import {
-  exclusionKindLabels,
-  getEvaluationReasons,
-  getExclusionKind,
   historyOpportunityToCard,
   translateStopReason,
-  type ExclusionKind,
 } from "@/lib/radar/presentation";
 import type {
   FeedbackInput,
@@ -88,7 +84,13 @@ export function SourcesConsulted({ sources }: { sources: SourceSummary[] }) {
           {sources.map((source) => (
             <li className="px-4 py-4 sm:px-5" key={source.sourceId}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <p className="font-semibold text-slate-900">{source.sourceLabel}</p>
+                <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+                  {source.sourceLabel}
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${source.status === "failed" ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}`}>
+                    {source.status === "failed" ? "Falló" : "Completada"}
+                  </span>
+                  <span className="text-xs font-normal text-slate-500">{source.durationMs} ms</span>
+                </p>
                 {translateStopReason(source.stopReason, source.continuedToNext) ? (
                   <p className="text-sm text-slate-600">
                     {translateStopReason(source.stopReason, source.continuedToNext)}
@@ -167,19 +169,16 @@ function slugify(value: string): string {
   return value.toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, "-");
 }
 
-const exclusionKindStyles: Record<ExclusionKind, string> = {
-  already_seen: "border-sky-200 bg-sky-50 text-sky-800",
-  overflow: "border-indigo-200 bg-indigo-50 text-indigo-800",
-  unverified: "border-amber-200 bg-amber-50 text-amber-900",
-  rejected: "border-slate-200 bg-slate-100 text-slate-700",
-};
-
 export function ExcludedResultsPanel({
   opportunities,
   initiallyOpen,
+  saveStates,
+  onSaveFeedback,
 }: {
   opportunities: OpportunityCardModel[];
   initiallyOpen: boolean;
+  saveStates: SaveStateMap;
+  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
 }) {
   const contentId = useId();
   const [isOpen, setIsOpen] = useState(initiallyOpen);
@@ -218,7 +217,12 @@ export function ExcludedResultsPanel({
         <div className="border-t border-slate-200" id={contentId}>
           <ol className="divide-y divide-slate-200">
             {visibleOpportunities.map((opportunity) => (
-              <ExcludedOpportunityRow key={opportunity.id} opportunity={opportunity} />
+              <ExcludedOpportunityRow
+                key={opportunity.id}
+                onSaveFeedback={onSaveFeedback}
+                opportunity={opportunity}
+                saveState={saveStates[opportunity.id] ?? { status: "idle" }}
+              />
             ))}
           </ol>
 
@@ -239,54 +243,22 @@ export function ExcludedResultsPanel({
   );
 }
 
-function ExcludedOpportunityRow({ opportunity }: { opportunity: OpportunityCardModel }) {
-  const exclusionKind = getExclusionKind(opportunity);
-  const reasons = getEvaluationReasons(opportunity).slice(0, 2);
-  const link = opportunity.originalUrl ?? opportunity.applicationUrl;
-
+function ExcludedOpportunityRow({
+  opportunity,
+  saveState,
+  onSaveFeedback,
+}: {
+  opportunity: OpportunityCardModel;
+  saveState: FeedbackSaveState;
+  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
+}) {
   return (
     <li className="px-4 py-4 sm:px-5">
-      <article className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${exclusionKindStyles[exclusionKind]}`}
-            >
-              {exclusionKindLabels[exclusionKind]}
-            </span>
-            <span className="text-xs font-medium text-slate-500">{opportunity.sourceLabel}</span>
-          </div>
-          <h3 className="mt-2 font-semibold text-slate-950">{opportunity.title}</h3>
-          {opportunity.companyName || opportunity.locationText ? (
-            <p className="mt-1 text-sm text-slate-600">
-              {[opportunity.companyName, opportunity.locationText].filter(Boolean).join(" · ")}
-            </p>
-          ) : null}
-          {reasons.length > 0 ? (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-              {reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="mt-3 max-w-2xl">
-            <EvaluationDetails opportunity={opportunity} />
-          </div>
-        </div>
-
-        {link ? (
-          <a
-            className="inline-flex min-h-10 items-center justify-center rounded-md border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-800 transition hover:bg-teal-50"
-            href={link}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Abrir oferta
-          </a>
-        ) : (
-          <span className="text-sm font-medium text-amber-800">Enlace no disponible</span>
-        )}
-      </article>
+      <OpportunityCard
+        onSaveFeedback={onSaveFeedback}
+        opportunity={opportunity}
+        saveState={saveState}
+      />
     </li>
   );
 }

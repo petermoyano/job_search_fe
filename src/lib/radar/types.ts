@@ -2,7 +2,11 @@ export type Verdict = "promising" | "maybe" | "reject";
 
 export type EligibilityStatus = "pass" | "fail" | "unknown";
 
-export type FeedbackAction = "interested" | "not_relevant" | "applied";
+export type FeedbackAction =
+  | "interested"
+  | "not_relevant"
+  | "applied"
+  | "should_have_been_shown";
 
 export type FeedbackReasonCode =
   | "not_remote"
@@ -14,7 +18,21 @@ export type FeedbackReasonCode =
   | "english_description_or_application"
   | "duplicate"
   | "broken_link"
+  | "actually_remote"
+  | "can_hire_argentina"
+  | "seniority_matches"
+  | "role_matches"
+  | "still_open"
+  | "english_not_required"
+  | "salary_matches"
+  | "provider_misclassified"
   | "other";
+
+export type AcquisitionMode =
+  | "web_search"
+  | "himalayas_api"
+  | "remote_ok_api"
+  | "we_work_remotely_rss";
 
 export type ProfileOption = {
   id: string;
@@ -44,6 +62,8 @@ export type SearchSourceConfig = {
   max_results: number;
   min_qualified_to_stop: number;
   enabled: boolean;
+  acquisition_mode?: AcquisitionMode;
+  attribution_url?: string | null;
 };
 
 export type EligibilityPolicyConfig = {
@@ -95,6 +115,8 @@ export type CandidateMetadata = {
   sourceId?: string;
   sourceLabel?: string;
   applicationUrl?: string;
+  acquisitionMode?: AcquisitionMode;
+  sourceAttributionUrl?: string;
 };
 
 export type RadarCandidate = {
@@ -118,6 +140,9 @@ export type OpportunityFacts = {
   publishedAt?: string;
   roleTier?: number;
   applicationUrl?: string;
+  salaryText?: string;
+  salaryMinUsdMonthly?: number;
+  salaryMaxUsdMonthly?: number;
 };
 
 export type EligibilityCheck = {
@@ -165,6 +190,10 @@ export type SourceSummary = {
   excludedCount: number;
   continuedToNext: boolean;
   stopReason?: string;
+  acquisitionMode: AcquisitionMode;
+  status: "completed" | "failed";
+  errorCode?: string;
+  durationMs: number;
 };
 
 export type RadarRunResponse = {
@@ -224,6 +253,7 @@ export type OpportunityCardModel = {
   companyName?: string;
   locationText?: string;
   sourceLabel: string;
+  sourceAttributionUrl?: string;
   score?: number;
   roleTier?: number;
   verdict?: Verdict;

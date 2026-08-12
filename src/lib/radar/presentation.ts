@@ -42,6 +42,7 @@ export const feedbackActionLabels: Record<FeedbackAction, string> = {
   interested: "Me interesa",
   not_relevant: "No es relevante",
   applied: "Ya postulé",
+  should_have_been_shown: "Debió mostrarse",
 };
 
 export const feedbackReasonLabels: Record<FeedbackReasonCode, string> = {
@@ -54,12 +55,35 @@ export const feedbackReasonLabels: Record<FeedbackReasonCode, string> = {
   english_description_or_application: "Publicación o postulación en inglés",
   duplicate: "Ya había visto esta vacante",
   broken_link: "El enlace no funciona",
+  actually_remote: "Sí es realmente remoto",
+  can_hire_argentina: "Sí contrata desde Argentina",
+  seniority_matches: "El seniority sí corresponde",
+  role_matches: "El puesto sí corresponde",
+  still_open: "La vacante sigue abierta",
+  english_not_required: "No exige inglés avanzado",
+  salary_matches: "El salario sí cumple",
+  provider_misclassified: "La fuente fue interpretada incorrectamente",
   other: "Otro",
 };
 
-export const feedbackReasonCodes = Object.keys(
-  feedbackReasonLabels,
-) as FeedbackReasonCode[];
+export const negativeFeedbackReasonCodes: FeedbackReasonCode[] = [
+  "not_remote", "cannot_hire_argentina", "requires_advanced_english", "closed",
+  "junior_or_internship", "wrong_role", "english_description_or_application",
+  "duplicate", "broken_link", "other",
+];
+
+export const positiveFeedbackReasonCodes: FeedbackReasonCode[] = [
+  "actually_remote", "can_hire_argentina", "seniority_matches", "role_matches",
+  "still_open", "english_not_required", "salary_matches", "provider_misclassified",
+  "other",
+];
+
+export const acquisitionModeLabels = {
+  web_search: "Búsqueda web",
+  himalayas_api: "API directa",
+  remote_ok_api: "API directa",
+  we_work_remotely_rss: "RSS directo",
+} as const;
 
 export const eligibilityCriterionLabels: Record<string, string> = {
   role: "Rol objetivo",
@@ -204,6 +228,7 @@ export function currentOpportunityToCard(
       item.candidate.metadata.sourceLabel ??
       item.classification.facts.sourceDomain ??
       item.candidate.source,
+    sourceAttributionUrl: item.candidate.metadata.sourceAttributionUrl,
     score: item.classification.score,
     roleTier: item.classification.roleTier ?? item.classification.facts.roleTier,
     verdict: item.classification.verdict,
@@ -253,12 +278,20 @@ export function getFactBadges(model: OpportunityCardModel): string[] {
   const { facts } = model;
 
   if (facts.workModality === "remote") badges.push("100% remoto");
-  if (facts.hiringScope === "argentina_latam_or_global") {
+  if (["argentina_latam_or_global", "argentina_latam", "global"].includes(facts.hiringScope ?? "")) {
     badges.push("Contrata desde Argentina");
   }
   if (facts.descriptionLanguage === "es") badges.push("Descripción en español");
   if (facts.applicationLanguage === "es") badges.push("Postulación en español");
   if (facts.activityStatus === "open") badges.push("Vacante abierta");
+  if (facts.salaryMinUsdMonthly) {
+    const maximum = facts.salaryMaxUsdMonthly;
+    badges.push(
+      maximum && maximum !== facts.salaryMinUsdMonthly
+        ? `USD ${facts.salaryMinUsdMonthly}-${maximum}/mes`
+        : `USD ${facts.salaryMinUsdMonthly}/mes`,
+    );
+  }
   if (facts.seniority === "semi_senior_or_above") {
     badges.push("Semi senior o superior");
   }

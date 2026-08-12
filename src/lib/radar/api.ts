@@ -210,7 +210,7 @@ export function runRadar(input: {
     method: "POST",
     body: {
       profile_id: input.profileId,
-      source: "tavily",
+      source: "configured",
       limit: input.limit,
     },
   });

@@ -505,7 +505,9 @@ export function JobRadar() {
             <ExcludedResultsPanel
               key={currentRun.runId}
               initiallyOpen={currentCards.length === 0}
+              onSaveFeedback={handleSaveFeedback}
               opportunities={excludedCards}
+              saveStates={feedbackSaveStates}
             />
           </div>
         ) : null}

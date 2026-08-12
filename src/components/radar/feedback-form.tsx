@@ -3,8 +3,9 @@
 import { FormEvent, useId, useState } from "react";
 import {
   feedbackActionLabels,
-  feedbackReasonCodes,
   feedbackReasonLabels,
+  negativeFeedbackReasonCodes,
+  positiveFeedbackReasonCodes,
 } from "@/lib/radar/presentation";
 import type {
   FeedbackAction,
@@ -27,7 +28,13 @@ type FeedbackFormProps = {
   onSave: (input: FeedbackInput) => Promise<void>;
 };
 
-const feedbackActions: FeedbackAction[] = ["interested", "not_relevant", "applied"];
+const feedbackActions: FeedbackAction[] = [
+  "interested", "not_relevant", "should_have_been_shown", "applied",
+];
+
+function actionRequiresReasons(action: FeedbackAction | ""): boolean {
+  return action === "not_relevant" || action === "should_have_been_shown";
+}
 
 export function FeedbackForm({
   feedback,
@@ -46,7 +53,7 @@ export function FeedbackForm({
   function selectAction(nextAction: FeedbackAction) {
     setAction(nextAction);
     setValidationError(null);
-    if (nextAction !== "not_relevant") {
+    if (!actionRequiresReasons(nextAction)) {
       setReasonCodes([]);
     }
   }
@@ -68,7 +75,7 @@ export function FeedbackForm({
       return;
     }
 
-    if (action === "not_relevant" && reasonCodes.length === 0) {
+    if (actionRequiresReasons(action) && reasonCodes.length === 0) {
       setValidationError("Selecciona al menos un motivo.");
       return;
     }
@@ -77,13 +84,16 @@ export function FeedbackForm({
     await onSave({
       profileId,
       action,
-      reasonCodes: action === "not_relevant" ? reasonCodes : [],
+      reasonCodes: actionRequiresReasons(action) ? reasonCodes : [],
       notes: notes.trim() || undefined,
     });
   }
 
   const isSaving = saveState.status === "saving";
   const responseSummary = action ? feedbackActionLabels[action] : "Completar";
+  const availableReasonCodes = action === "should_have_been_shown"
+    ? positiveFeedbackReasonCodes
+    : negativeFeedbackReasonCodes;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -98,7 +108,7 @@ export function FeedbackForm({
           </span>
         </summary>
         <fieldset className="space-y-3 border-t border-slate-200 bg-slate-50/50 p-3 sm:p-4" disabled={isSaving}>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {feedbackActions.map((option) => (
               <label
                 className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
@@ -121,7 +131,7 @@ export function FeedbackForm({
             ))}
           </div>
 
-          {action === "not_relevant" ? (
+          {actionRequiresReasons(action) ? (
             <fieldset
               aria-describedby={validationError ? `${formId}-validation` : undefined}
               className="rounded-md border border-amber-200 bg-amber-50 p-3"
@@ -130,7 +140,7 @@ export function FeedbackForm({
                 Motivo obligatorio
               </legend>
               <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                {feedbackReasonCodes.map((reasonCode) => (
+                {availableReasonCodes.map((reasonCode) => (
                   <label className="flex items-start gap-2 text-sm text-slate-800" key={reasonCode}>
                     <input
                       checked={reasonCodes.includes(reasonCode)}

@@ -1,4 +1,5 @@
 import type {
+  AcquisitionMode,
   CandidateMetadata,
   EligibilityCheck,
   EligibilityStatus,
@@ -131,11 +132,24 @@ function parseEligibilityStatus(value: unknown, path: string): EligibilityStatus
   }
 }
 
+function parseAcquisitionMode(value: unknown, path: string): AcquisitionMode {
+  switch (value) {
+    case "web_search":
+    case "himalayas_api":
+    case "remote_ok_api":
+    case "we_work_remotely_rss":
+      return value;
+    default:
+      throw new RadarContractError(`${path} contiene un modo de adquisición desconocido.`);
+  }
+}
+
 function parseFeedbackAction(value: unknown, path: string): FeedbackAction {
   switch (value) {
     case "interested":
     case "not_relevant":
     case "applied":
+    case "should_have_been_shown":
       return value;
     default:
       throw new RadarContractError(`${path} contiene una acción desconocida.`);
@@ -153,6 +167,14 @@ function parseFeedbackReasonCode(value: unknown, path: string): FeedbackReasonCo
     case "english_description_or_application":
     case "duplicate":
     case "broken_link":
+    case "actually_remote":
+    case "can_hire_argentina":
+    case "seniority_matches":
+    case "role_matches":
+    case "still_open":
+    case "english_not_required":
+    case "salary_matches":
+    case "provider_misclassified":
     case "other":
       return value;
     default:
@@ -168,6 +190,14 @@ function parseMetadata(value: unknown, path: string): CandidateMetadata {
     sourceId: optionalString(record.source_id, `${path}.source_id`),
     sourceLabel: optionalString(record.source_label, `${path}.source_label`),
     applicationUrl: optionalHttpUrl(record.application_url, `${path}.application_url`),
+    acquisitionMode:
+      record.acquisition_mode === undefined
+        ? undefined
+        : parseAcquisitionMode(record.acquisition_mode, `${path}.acquisition_mode`),
+    sourceAttributionUrl: optionalHttpUrl(
+      record.source_attribution_url ?? record.attribution_url,
+      `${path}.source_attribution_url`,
+    ),
   };
 }
 
@@ -192,6 +222,15 @@ function parseFacts(value: unknown, path: string): OpportunityFacts {
     publishedAt: optionalString(record.published_at, `${path}.published_at`),
     roleTier: optionalNumber(record.role_tier, `${path}.role_tier`),
     applicationUrl: optionalHttpUrl(record.application_url, `${path}.application_url`),
+    salaryText: optionalString(record.salary_text, `${path}.salary_text`),
+    salaryMinUsdMonthly: optionalNumber(
+      record.salary_min_usd_monthly,
+      `${path}.salary_min_usd_monthly`,
+    ),
+    salaryMaxUsdMonthly: optionalNumber(
+      record.salary_max_usd_monthly,
+      `${path}.salary_max_usd_monthly`,
+    ),
   };
 }
 
@@ -297,6 +336,13 @@ function parseSourceSummary(value: unknown, path: string): SourceSummary {
       `${path}.continued_to_next`,
     ),
     stopReason: optionalString(record.stop_reason, `${path}.stop_reason`),
+    acquisitionMode: parseAcquisitionMode(
+      record.acquisition_mode ?? "web_search",
+      `${path}.acquisition_mode`,
+    ),
+    status: record.status === "failed" ? "failed" : "completed",
+    errorCode: optionalString(record.error_code, `${path}.error_code`),
+    durationMs: optionalNumber(record.duration_ms, `${path}.duration_ms`) ?? 0,
   };
 }
 
