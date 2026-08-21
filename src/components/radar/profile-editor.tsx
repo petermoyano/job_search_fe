@@ -206,8 +206,8 @@ export function ProfileEditor() {
         <header className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <p className="text-sm font-medium uppercase text-teal-700">Configuración del radar</p>
-              <h1 className="mt-1 text-2xl font-semibold">Perfil de Romina</h1>
+              <p className="text-sm font-medium uppercase text-teal-700">Mi perfil</p>
+              <h1 className="mt-1 text-2xl font-semibold">Perfil profesional de Romina</h1>
               <p className="mt-2 text-sm text-slate-600">
                 Los cambios se aplican sólo a búsquedas nuevas. Revisión {document.revision}
                 {document.persisted ? " guardada" : " basada en la configuración inicial"}.
@@ -252,6 +252,24 @@ export function ProfileEditor() {
             Se aceptan puestos 100% remotos que contraten desde Argentina, y puestos híbridos sólo si la sede presencial está en Mendoza. Los presenciales se excluyen.
           </p>
           <div className="grid gap-5 md:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium" htmlFor="description-language">
+              Idioma de las ofertas
+              <select
+                className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                id="description-language"
+                onChange={(event) => updateProfile({
+                  eligibility_policy: {
+                    ...policy,
+                    required_description_language: event.target.value || null,
+                  },
+                })}
+                value={policy.required_description_language ?? ""}
+              >
+                <option value="">Sin preferencia de idioma</option>
+                <option value="es">Sólo ofertas en español</option>
+              </select>
+              <span className="font-normal text-slate-500">Las ofertas en otro idioma no se mostrarán en búsquedas nuevas.</span>
+            </label>
             <label className="flex flex-col gap-2 text-sm font-medium" htmlFor="salary-floor">
               Piso salarial mensual (USD)
               <input
@@ -282,6 +300,20 @@ export function ProfileEditor() {
             </label>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
+            <label className="flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm leading-6">
+              <input
+                checked={policy.require_spanish_application}
+                className="mt-1 h-4 w-4 accent-teal-700"
+                onChange={(event) => updateProfile({
+                  eligibility_policy: {
+                    ...policy,
+                    require_spanish_application: event.target.checked,
+                  },
+                })}
+                type="checkbox"
+              />
+              Exigir que el proceso de postulación esté disponible en español.
+            </label>
             <LinesField
               help="Ventas, call center, contabilidad e impuestos, entre otros."
               id="role-exclusions"
