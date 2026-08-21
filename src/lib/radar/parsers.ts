@@ -138,6 +138,8 @@ function parseAcquisitionMode(value: unknown, path: string): AcquisitionMode {
     case "himalayas_api":
     case "remote_ok_api":
     case "we_work_remotely_rss":
+    case "jobspresso_wp_rest":
+    case "randstad_html":
       return value;
     default:
       throw new RadarContractError(`${path} contiene un modo de adquisición desconocido.`);

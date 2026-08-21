@@ -32,7 +32,9 @@ export type AcquisitionMode =
   | "web_search"
   | "himalayas_api"
   | "remote_ok_api"
-  | "we_work_remotely_rss";
+  | "we_work_remotely_rss"
+  | "jobspresso_wp_rest"
+  | "randstad_html";
 
 export type ProfileOption = {
   id: string;

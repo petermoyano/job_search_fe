@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { translateStopReason } from "@/lib/radar/presentation";
+import {
+  acquisitionModeLabels,
+  translateStopReason,
+} from "@/lib/radar/presentation";
 import type { ProfileSource, RadarRunResponse } from "@/lib/radar/types";
 
 export type SearchActivityStatus = "searching" | "completed" | "failed";
@@ -257,6 +260,9 @@ function CompletedActivity({
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
                       {source.sourceLabel}
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        {acquisitionModeLabels[source.acquisitionMode]}
+                      </span>
                       <span className={source.status === "failed" ? "text-red-700" : "text-emerald-700"}>
                         {source.status === "failed" ? "Falló" : "Completada"}
                       </span>

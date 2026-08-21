@@ -83,6 +83,8 @@ export const acquisitionModeLabels = {
   himalayas_api: "API directa",
   remote_ok_api: "API directa",
   we_work_remotely_rss: "RSS directo",
+  jobspresso_wp_rest: "REST de WordPress",
+  randstad_html: "HTML estructurado",
 } as const;
 
 export const eligibilityCriterionLabels: Record<string, string> = {

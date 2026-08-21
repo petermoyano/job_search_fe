@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { OpportunityCard } from "./opportunity-card";
 import type { FeedbackSaveState } from "./feedback-form";
 import {
+  acquisitionModeLabels,
   historyOpportunityToCard,
   translateStopReason,
 } from "@/lib/radar/presentation";
@@ -88,6 +89,9 @@ export function SourcesConsulted({ sources }: { sources: SourceSummary[] }) {
                   {source.sourceLabel}
                   <span className={`rounded-full px-2 py-0.5 text-xs ${source.status === "failed" ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"}`}>
                     {source.status === "failed" ? "Falló" : "Completada"}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-600">
+                    {acquisitionModeLabels[source.acquisitionMode]}
                   </span>
                   <span className="text-xs font-normal text-slate-500">{source.durationMs} ms</span>
                 </p>
