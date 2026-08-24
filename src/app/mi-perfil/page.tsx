@@ -1,5 +1,5 @@
-import { ProfileEditor } from "@/components/radar/profile-editor";
+import { redirect } from "next/navigation";
 
 export default function MyProfilePage() {
-  return <ProfileEditor />;
+  redirect("/mi-perfil/romina-remote-spanish-hr");
 }

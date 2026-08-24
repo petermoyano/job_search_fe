@@ -357,7 +357,7 @@ export function JobRadar() {
           <div className="mb-5 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm font-medium uppercase text-teal-700">Job Radar</p>
-              <Link className="text-sm font-semibold text-teal-700 underline" href="/mi-perfil">
+              <Link className="text-sm font-semibold text-teal-700 underline" href={"/mi-perfil/" + selectedProfile}>
                 Mi perfil
               </Link>
             </div>

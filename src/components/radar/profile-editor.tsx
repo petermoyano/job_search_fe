@@ -15,8 +15,6 @@ import type {
   SearchSourceConfig,
 } from "@/lib/radar/types";
 
-const profileId = "romina-remote-spanish-hr";
-
 function splitLines(value: string): string[] {
   return Array.from(
     new Set(value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean)),
@@ -61,7 +59,7 @@ function LinesField({
   );
 }
 
-export function ProfileEditor() {
+export function ProfileEditor({ profileId }: { profileId: string }) {
   const [document, setDocument] = useState<ProfileConfigDocument | null>(null);
   const [profile, setProfile] = useState<RadarProfileConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,7 +156,7 @@ export function ProfileEditor() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!profile || !document || !profile.eligibility_policy) return;
+    if (!profile || !document |) return;
     if (!profile.ordered_sources.some((source) => source.enabled)) {
       setError({ message: "Dejá al menos una fuente habilitada." });
       return;
@@ -186,7 +184,7 @@ export function ProfileEditor() {
     return <main className="mx-auto max-w-5xl px-4 py-10 text-slate-600">Cargando perfil…</main>;
   }
 
-  if (!profile || !document || !profile.eligibility_policy) {
+  if (!profile || !document |) {
     return (
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
         <p className="rounded-md border border-red-200 bg-red-50 p-4 text-red-900">
@@ -197,7 +195,7 @@ export function ProfileEditor() {
     );
   }
 
-  const policy = profile.eligibility_policy;
+  const policy = profile.eligibility_policy ?? { require_fully_remote: false, eligible_remote_regions: [], allowed_hybrid_locations: [], require_spanish_application: false, reject_advanced_english: false, rejected_seniority_terms: [], excluded_role_terms: [], require_active_posting: false };
   const sources = [...profile.ordered_sources].sort((a, b) => a.order - b.order);
 
   return (
@@ -207,7 +205,7 @@ export function ProfileEditor() {
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
               <p className="text-sm font-medium uppercase text-teal-700">Mi perfil</p>
-              <h1 className="mt-1 text-2xl font-semibold">Perfil profesional de Romina</h1>
+              <h1 className="mt-1 text-2xl font-semibold">{profile.name}</h1>
               <p className="mt-2 text-sm text-slate-600">
                 Los cambios se aplican sólo a búsquedas nuevas. Revisión {document.revision}
                 {document.persisted ? " guardada" : " basada en la configuración inicial"}.
@@ -267,6 +265,7 @@ export function ProfileEditor() {
               >
                 <option value="">Sin preferencia de idioma</option>
                 <option value="es">Sólo ofertas en español</option>
+                <option value="en">Sólo ofertas en inglés</option>
               </select>
               <span className="font-normal text-slate-500">Las ofertas en otro idioma no se mostrarán en búsquedas nuevas.</span>
             </label>
