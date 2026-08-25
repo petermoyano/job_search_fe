@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { ResumeUploadPanel } from "@/components/resume/resume-upload-panel";
 import {
   getProfileConfig,
   toRequestError,
@@ -66,6 +67,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<RequestError | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [sourceLabel, setSourceLabel] = useState("");
   const [sourceDomain, setSourceDomain] = useState("");
 
@@ -75,6 +77,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
       .then((result) => {
         setDocument(result);
         setProfile(result.profile);
+        setIsDirty(false);
         setError(null);
       })
       .catch((loadError: unknown) => {
@@ -85,11 +88,12 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [profileId]);
 
   function updateProfile(update: Partial<RadarProfileConfig>) {
     setProfile((current) => (current ? { ...current, ...update } : current));
     setSaved(false);
+    setIsDirty(true);
   }
 
   function updateSource(sourceId: string, update: Partial<SearchSourceConfig>) {
@@ -156,7 +160,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!profile || !document |) return;
+    if (!profile || !document) return;
     if (!profile.ordered_sources.some((source) => source.enabled)) {
       setError({ message: "Dejá al menos una fuente habilitada." });
       return;
@@ -173,6 +177,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
       setDocument(result);
       setProfile(result.profile);
       setSaved(true);
+      setIsDirty(false);
     } catch (saveError: unknown) {
       setError(toRequestError(saveError, "No pudimos guardar el perfil."));
     } finally {
@@ -184,7 +189,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
     return <main className="mx-auto max-w-5xl px-4 py-10 text-slate-600">Cargando perfil…</main>;
   }
 
-  if (!profile || !document |) {
+  if (!profile || !document) {
     return (
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-10">
         <p className="rounded-md border border-red-200 bg-red-50 p-4 text-red-900">
@@ -214,6 +219,19 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
             <Link className="text-sm font-semibold text-teal-700 underline" href="/">Volver al radar</Link>
           </div>
         </header>
+
+        <ResumeUploadPanel
+          isProfileDirty={isDirty}
+          onApplied={(result) => {
+            setDocument(result);
+            setProfile(result.profile);
+            setIsDirty(false);
+            setSaved(false);
+          }}
+          profile={profile}
+          profileId={profileId}
+          revision={document.revision}
+        />
 
         <section className="space-y-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Perfil y puestos buscados</h2>

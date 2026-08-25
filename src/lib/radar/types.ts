@@ -1,3 +1,5 @@
+import type { ResumeProfileData } from "@/lib/resume/types";
+
 export type Verdict = "promising" | "maybe" | "reject";
 
 export type EligibilityStatus = "pass" | "fail" | "unknown";
@@ -72,6 +74,7 @@ export type EligibilityPolicyConfig = {
   require_fully_remote: boolean;
   eligible_remote_regions: string[];
   allowed_hybrid_locations: string[];
+  required_description_language?: string | null;
   required_application_language?: string | null;
   require_spanish_application: boolean;
   reject_advanced_english: boolean;
@@ -89,6 +92,7 @@ export type RadarProfileConfig = {
   owner_id?: string | null;
   owner_name?: string | null;
   candidate_summary?: string | null;
+  professional_profile?: ResumeProfileData;
   target_roles: string[];
   role_tiers: RoleTierConfig[];
   location_policy: string;
