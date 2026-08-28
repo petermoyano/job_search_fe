@@ -152,7 +152,7 @@ export function OpportunityGroup({
           {emptyMessage ?? "Sin resultados en esta categoría."}
         </p>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] items-start gap-3">
           {opportunities.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
@@ -217,7 +217,7 @@ export function ExcludedResultsPanel({
 
       {isOpen ? (
         <div className="border-t border-slate-200" id={contentId}>
-          <ol className="divide-y divide-slate-200">
+          <ol className="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] gap-3 p-3">
             {visibleOpportunities.map((opportunity) => (
               <ExcludedOpportunityRow
                 key={opportunity.id}
@@ -255,7 +255,7 @@ function ExcludedOpportunityRow({
   onSoftDelete: SoftDeleteHandler;
 }) {
   return (
-    <li className="px-4 py-4 sm:px-5">
+    <li className="min-w-0">
       <OpportunityCard
         isDeleting={isDeleting}
         onSoftDelete={onSoftDelete}
@@ -376,7 +376,7 @@ export function HistoryPanel({
           ) : null}
 
           {visibleHistory.length > 0 ? (
-            <div className="grid items-start gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] items-start gap-3">
               {visibleHistory.map((item) => {
                 const opportunity = historyOpportunityToCard(item, selectedProfileId);
                 return (
