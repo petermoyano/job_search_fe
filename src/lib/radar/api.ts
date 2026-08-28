@@ -19,7 +19,7 @@ import type {
 const apiBaseUrl = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 
 type JsonRequestOptions = {
-  method?: "GET" | "POST" | "PUT";
+  method?: "DELETE" | "GET" | "POST" | "PUT";
   body?: unknown;
   signal?: AbortSignal;
 };
@@ -205,6 +205,18 @@ export function getHistory(
     }
     return history;
   });
+}
+
+export function softDeleteOpportunity(
+  opportunityId: string,
+  profileId: string,
+): Promise<void> {
+  const query = new URLSearchParams({ profile_id: profileId });
+  return requestJson(
+    "/radar/opportunities/" + encodeURIComponent(opportunityId) + "?" + query.toString(),
+    () => undefined,
+    { method: "DELETE" },
+  );
 }
 
 export function runRadar(input: {

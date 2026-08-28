@@ -265,7 +265,7 @@ export function ProfileEditor({ profileId }: { profileId: string }) {
         <section className="space-y-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Filtros obligatorios</h2>
           <p className="rounded-md bg-sky-50 p-3 text-sm leading-6 text-sky-950">
-            Se aceptan puestos 100% remotos que contraten desde Argentina, y puestos híbridos sólo si la sede presencial está en Mendoza. Los presenciales se excluyen.
+            Cada perfil aplica sus propias reglas de modalidad, ubicación, idioma, seniority y compensación.
           </p>
           <div className="grid gap-5 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-medium" htmlFor="description-language">

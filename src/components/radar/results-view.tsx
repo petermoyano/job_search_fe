@@ -2,14 +2,12 @@
 
 import { useId, useState } from "react";
 import { OpportunityCard } from "./opportunity-card";
-import type { FeedbackSaveState } from "./feedback-form";
 import {
   acquisitionModeLabels,
   historyOpportunityToCard,
   translateStopReason,
 } from "@/lib/radar/presentation";
 import type {
-  FeedbackInput,
   HistoryOpportunity,
   OpportunityCardModel,
   RadarRunResponse,
@@ -26,7 +24,7 @@ export type DirectLink = {
 export type CopyStatus = "idle" | "copied" | "error";
 export type HistoryView = "presented" | "excluded";
 
-type SaveStateMap = Record<string, FeedbackSaveState>;
+type SoftDeleteHandler = (opportunity: OpportunityCardModel) => void;
 
 export function ErrorNotice({ error }: { error: RequestError }) {
   return (
@@ -129,14 +127,14 @@ export function OpportunityGroup({
   title,
   opportunities,
   emptyMessage,
-  saveStates,
-  onSaveFeedback,
+  deletingOpportunityIds,
+  onSoftDelete,
 }: {
   title: string;
   opportunities: OpportunityCardModel[];
   emptyMessage?: string;
-  saveStates: SaveStateMap;
-  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
+  deletingOpportunityIds: Set<string>;
+  onSoftDelete: SoftDeleteHandler;
 }) {
   return (
     <section aria-labelledby={`group-${slugify(title)}`}>
@@ -158,9 +156,9 @@ export function OpportunityGroup({
           {opportunities.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
-              onSaveFeedback={onSaveFeedback}
+              isDeleting={deletingOpportunityIds.has(opportunity.id)}
+              onSoftDelete={onSoftDelete}
               opportunity={opportunity}
-              saveState={saveStates[opportunity.id] ?? { status: "idle" }}
             />
           ))}
         </div>
@@ -176,13 +174,13 @@ function slugify(value: string): string {
 export function ExcludedResultsPanel({
   opportunities,
   initiallyOpen,
-  saveStates,
-  onSaveFeedback,
+  deletingOpportunityIds,
+  onSoftDelete,
 }: {
   opportunities: OpportunityCardModel[];
   initiallyOpen: boolean;
-  saveStates: SaveStateMap;
-  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
+  deletingOpportunityIds: Set<string>;
+  onSoftDelete: SoftDeleteHandler;
 }) {
   const contentId = useId();
   const [isOpen, setIsOpen] = useState(initiallyOpen);
@@ -223,9 +221,9 @@ export function ExcludedResultsPanel({
             {visibleOpportunities.map((opportunity) => (
               <ExcludedOpportunityRow
                 key={opportunity.id}
-                onSaveFeedback={onSaveFeedback}
+                isDeleting={deletingOpportunityIds.has(opportunity.id)}
+                onSoftDelete={onSoftDelete}
                 opportunity={opportunity}
-                saveState={saveStates[opportunity.id] ?? { status: "idle" }}
               />
             ))}
           </ol>
@@ -249,19 +247,19 @@ export function ExcludedResultsPanel({
 
 function ExcludedOpportunityRow({
   opportunity,
-  saveState,
-  onSaveFeedback,
+  isDeleting,
+  onSoftDelete,
 }: {
   opportunity: OpportunityCardModel;
-  saveState: FeedbackSaveState;
-  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
+  isDeleting: boolean;
+  onSoftDelete: SoftDeleteHandler;
 }) {
   return (
     <li className="px-4 py-4 sm:px-5">
       <OpportunityCard
-        onSaveFeedback={onSaveFeedback}
+        isDeleting={isDeleting}
+        onSoftDelete={onSoftDelete}
         opportunity={opportunity}
-        saveState={saveState}
       />
     </li>
   );
@@ -278,9 +276,9 @@ export function HistoryPanel({
   onHistoryViewChange,
   selectedProfileId,
   currentOpportunityIds,
-  saveStates,
+  deletingOpportunityIds,
   onRefresh,
-  onSaveFeedback,
+  onSoftDelete,
 }: {
   isOpen: boolean;
   onToggle: () => void;
@@ -292,9 +290,9 @@ export function HistoryPanel({
   onHistoryViewChange: (view: HistoryView) => void;
   selectedProfileId: string;
   currentOpportunityIds: Set<string>;
-  saveStates: SaveStateMap;
+  deletingOpportunityIds: Set<string>;
   onRefresh: () => void;
-  onSaveFeedback: (opportunityId: string, input: FeedbackInput) => Promise<void>;
+  onSoftDelete: SoftDeleteHandler;
 }) {
   const historyIsLoaded = presentedHistory !== null && excludedHistory !== null;
   const selectedHistory =
@@ -384,9 +382,9 @@ export function HistoryPanel({
                 return (
                   <OpportunityCard
                     key={opportunity.id}
-                    onSaveFeedback={onSaveFeedback}
+                    isDeleting={deletingOpportunityIds.has(opportunity.id)}
+                    onSoftDelete={onSoftDelete}
                     opportunity={opportunity}
-                    saveState={saveStates[opportunity.id] ?? { status: "idle" }}
                   />
                 );
               })}

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { FeedbackSaveState } from "./feedback-form";
 import {
   SearchActivityPanel,
   type SearchActivityStatus,
@@ -21,7 +20,7 @@ import {
   getHistory,
   getProfiles,
   runRadar,
-  saveOpportunityFeedback,
+  softDeleteOpportunity,
   toRequestError,
 } from "@/lib/radar/api";
 import {
@@ -31,8 +30,8 @@ import {
   defaultProfileId,
 } from "@/lib/radar/presentation";
 import type {
-  FeedbackInput,
   HistoryOpportunity,
+  OpportunityCardModel,
   ProfileOption,
   RadarRunResponse,
   RequestError,
@@ -86,9 +85,12 @@ export function JobRadar() {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyView, setHistoryView] = useState<HistoryView>("presented");
-  const [feedbackSaveStates, setFeedbackSaveStates] = useState<
-    Record<string, FeedbackSaveState>
-  >({});
+  const [deletingOpportunityIds, setDeletingOpportunityIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [deletedOpportunityIds, setDeletedOpportunityIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const selectedProfileOption = useMemo(
     () => profiles.find((profile) => profile.id === selectedProfile),
@@ -157,7 +159,12 @@ export function JobRadar() {
     return () => controller.abort();
   }, [historyRefreshKey, selectedProfile]);
 
-  const visibleItems = currentRun?.items ?? [];
+  const visibleItems = (currentRun?.items ?? []).filter(
+    (item) => !deletedOpportunityIds.has(item.opportunityId),
+  );
+  const visibleExcludedItems = (currentRun?.excludedItems ?? []).filter(
+    (item) => !deletedOpportunityIds.has(item.opportunityId),
+  );
 
   const currentCards = useMemo(
     () =>
@@ -169,14 +176,14 @@ export function JobRadar() {
 
   const excludedCards = useMemo(
     () =>
-      (currentRun?.excludedItems ?? []).map((item) =>
+      visibleExcludedItems.map((item) =>
         currentOpportunityToCard(
           item,
           currentRun?.profileId ?? selectedProfile,
           false,
         ),
       ),
-    [currentRun?.excludedItems, currentRun?.profileId, selectedProfile],
+    [currentRun?.profileId, selectedProfile, visibleExcludedItems],
   );
 
   const currentOpportunityIds = useMemo(
@@ -191,7 +198,6 @@ export function JobRadar() {
         const card = currentOpportunityToCard(item, currentRun?.profileId ?? selectedProfile);
         if (
           !item.classification.eligible ||
-          item.feedback?.action === "not_relevant" ||
           !card.applicationUrl
         ) {
           return [];
@@ -215,7 +221,8 @@ export function JobRadar() {
     setExcludedHistory(null);
     setHistoryError(null);
     setHistoryView("presented");
-    setFeedbackSaveStates({});
+    setDeletingOpportunityIds(new Set());
+    setDeletedOpportunityIds(new Set());
   }
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -254,55 +261,29 @@ export function JobRadar() {
     }
   }
 
-  async function handleSaveFeedback(opportunityId: string, input: FeedbackInput) {
-    setFeedbackSaveStates((current) => ({
-      ...current,
-      [opportunityId]: { status: "saving" },
-    }));
+  async function handleSoftDelete(opportunity: OpportunityCardModel) {
+    if (deletingOpportunityIds.has(opportunity.id)) return;
 
+    setDeletingOpportunityIds((current) => new Set(current).add(opportunity.id));
     try {
-      const savedFeedback = await saveOpportunityFeedback(opportunityId, input);
-
-      setCurrentRun((run) =>
-        run
-          ? {
-              ...run,
-              items: run.items.map((item) =>
-                item.opportunityId === opportunityId
-                  ? { ...item, feedback: savedFeedback }
-                  : item,
-              ),
-              excludedItems: run.excludedItems.map((item) =>
-                item.opportunityId === opportunityId
-                  ? { ...item, feedback: savedFeedback }
-                  : item,
-              ),
-            }
-          : run,
-      );
+      await softDeleteOpportunity(opportunity.id, opportunity.profileId);
+      setDeletedOpportunityIds((current) => new Set(current).add(opportunity.id));
       setPresentedHistory((items) =>
-        items?.map((item) =>
-          item.id === opportunityId ? { ...item, feedback: savedFeedback } : item,
-        ) ?? null,
+        items?.filter((item) => item.id !== opportunity.id) ?? null,
       );
       setExcludedHistory((items) =>
-        items?.map((item) =>
-          item.id === opportunityId ? { ...item, feedback: savedFeedback } : item,
-        ) ?? null,
+        items?.filter((item) => item.id !== opportunity.id) ?? null,
       );
-      setFeedbackSaveStates((current) => ({
-        ...current,
-        [opportunityId]: { status: "success" },
-      }));
+      setHistoryRefreshKey((value) => value + 1);
       setCopyStatus("idle");
     } catch (error) {
-      setFeedbackSaveStates((current) => ({
-        ...current,
-        [opportunityId]: {
-          status: "error",
-          error: toRequestError(error, "No pudimos guardar tu respuesta."),
-        },
-      }));
+      setSearchError(toRequestError(error, "No pudimos ocultar la oportunidad."));
+    } finally {
+      setDeletingOpportunityIds((current) => {
+        const next = new Set(current);
+        next.delete(opportunity.id);
+        return next;
+      });
     }
   }
 
@@ -459,9 +440,9 @@ export function JobRadar() {
               </div>
             ) : (
               <OpportunityGroup
-                onSaveFeedback={handleSaveFeedback}
+                deletingOpportunityIds={deletingOpportunityIds}
+                onSoftDelete={handleSoftDelete}
                 opportunities={currentCards}
-                saveStates={feedbackSaveStates}
                 title="Oportunidades nuevas verificadas"
               />
             )}
@@ -469,9 +450,9 @@ export function JobRadar() {
             <ExcludedResultsPanel
               key={currentRun.runId}
               initiallyOpen={currentCards.length === 0}
-              onSaveFeedback={handleSaveFeedback}
+              deletingOpportunityIds={deletingOpportunityIds}
+              onSoftDelete={handleSoftDelete}
               opportunities={excludedCards}
-              saveStates={feedbackSaveStates}
             />
           </div>
         ) : null}
@@ -490,9 +471,9 @@ export function JobRadar() {
           isOpen={isHistoryOpen}
           onHistoryViewChange={setHistoryView}
           onRefresh={() => setHistoryRefreshKey((value) => value + 1)}
-          onSaveFeedback={handleSaveFeedback}
+          onSoftDelete={handleSoftDelete}
           onToggle={() => setIsHistoryOpen((value) => !value)}
-          saveStates={feedbackSaveStates}
+          deletingOpportunityIds={deletingOpportunityIds}
           selectedProfileId={selectedProfile}
         />
 
