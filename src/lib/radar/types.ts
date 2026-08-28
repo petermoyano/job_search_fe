@@ -230,7 +230,10 @@ export type HistoryEvaluation = {
 
 export type HistoryOpportunity = {
   id: string;
-  profileId?: string;
+  profileId: string;
+  runId: string;
+  profileVersion: string;
+  evaluatedAt: string;
   canonicalUrl?: string;
   sourceKind: string;
   sourceDomain?: string;

@@ -199,6 +199,11 @@ export function getHistory(
 
   return requestJson(`/radar/opportunities?${query.toString()}`, parseHistory, {
     signal: options.signal,
+  }).then((history) => {
+    if (history.some((item) => item.profileId !== profileId)) {
+      throw new RadarApiError("El servidor devolvio historial de otro perfil.");
+    }
+    return history;
   });
 }
 
@@ -236,5 +241,10 @@ export function saveOpportunityFeedback(
         notes: input.notes ?? null,
       },
     },
-  );
+  ).then((feedback) => {
+    if (feedback.profileId !== input.profileId) {
+      throw new RadarApiError("El servidor guardo la respuesta en otro perfil.");
+    }
+    return feedback;
+  });
 }

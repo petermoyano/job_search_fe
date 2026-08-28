@@ -8,21 +8,21 @@ import type {
   Verdict,
 } from "./types";
 
-export const primaryProfileId = "romina-remote-spanish-hr";
+export const defaultProfileId = "peter-latam-remote-ai-fullstack-product";
 
 export const fallbackProfiles = [
-  { id: primaryProfileId, label: "Romina - RRHH remoto en español", orderedSources: [] },
   {
-    id: "romina-mendoza-hr-onsite-hybrid",
-    label: "Romina - RRHH Mendoza presencial/híbrido",
-    orderedSources: [],
-  },
-  {
-    id: "peter-latam-remote-ai-fullstack-product",
+    id: defaultProfileId,
     label: "Peter - AI/fullstack/product remoto LATAM",
     orderedSources: [],
   },
+  {
+    id: "romina-remote-spanish-hr",
+    label: "Romina - RRHH remoto en espanol",
+    orderedSources: [],
+  },
 ];
+
 
 export const limitOptions = [10, 25, 50] as const;
 

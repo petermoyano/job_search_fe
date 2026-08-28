@@ -509,7 +509,7 @@ function parseHistoryEvaluation(value: unknown, path: string): HistoryEvaluation
 function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportunity {
   const record = requireRecord(value, path);
   const id = requireString(record.id, `${path}.id`);
-  const profileId = optionalString(record.profile_id, `${path}.profile_id`);
+  const profileId = requireString(record.profile_id, `${path}.profile_id`);
   let feedback: OpportunityFeedback | undefined;
 
   if (record.feedback !== undefined && record.feedback !== null) {
@@ -526,6 +526,9 @@ function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportuni
   return {
     id,
     profileId,
+    runId: requireString(record.run_id, `${path}.run_id`),
+    profileVersion: requireString(record.profile_version, `${path}.profile_version`),
+    evaluatedAt: requireString(record.evaluated_at, `${path}.evaluated_at`),
     canonicalUrl: optionalHttpUrl(record.canonical_url, `${path}.canonical_url`),
     sourceKind: requireString(record.source_kind, `${path}.source_kind`),
     sourceDomain: optionalString(record.source_domain, `${path}.source_domain`),
@@ -545,13 +548,9 @@ function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportuni
 }
 
 export function parseHistory(value: unknown): HistoryOpportunity[] {
-  return requireArray(value, "history").flatMap((item, index) => {
-    try {
-      return [parseHistoryOpportunity(item, `history[${index}]`)];
-    } catch {
-      return [];
-    }
-  });
+  return requireArray(value, "history").map((item, index) =>
+    parseHistoryOpportunity(item, `history[${index}]`),
+  );
 }
 
 export function parseFeedbackResponse(

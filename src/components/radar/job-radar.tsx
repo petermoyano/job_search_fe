@@ -28,8 +28,7 @@ import {
   currentOpportunityToCard,
   fallbackProfiles,
   limitOptions,
-  primaryProfileId,
-  verdictLabels,
+  defaultProfileId,
 } from "@/lib/radar/presentation";
 import type {
   FeedbackInput,
@@ -37,12 +36,10 @@ import type {
   ProfileOption,
   RadarRunResponse,
   RequestError,
-  Verdict,
 } from "@/lib/radar/types";
 
 type LimitOption = (typeof limitOptions)[number];
 
-const verdictOrder: Verdict[] = ["promising", "maybe", "reject"];
 
 function mergeProfiles(apiProfiles: ProfileOption[]): ProfileOption[] {
   const profiles = new Map<string, ProfileOption>();
@@ -71,7 +68,7 @@ function emptySearchMessage(run: RadarRunResponse): string {
 export function JobRadar() {
   const [profiles, setProfiles] = useState<ProfileOption[]>(fallbackProfiles);
   const [profileLoadError, setProfileLoadError] = useState<RequestError | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState(primaryProfileId);
+  const [selectedProfile, setSelectedProfile] = useState(defaultProfileId);
   const [limit, setLimit] = useState<LimitOption>(25);
   const [currentRun, setCurrentRun] = useState<RadarRunResponse | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -93,14 +90,13 @@ export function JobRadar() {
     Record<string, FeedbackSaveState>
   >({});
 
-  const isPrimaryProfile = selectedProfile === primaryProfileId;
   const selectedProfileOption = useMemo(
     () => profiles.find((profile) => profile.id === selectedProfile),
     [profiles, selectedProfile],
   );
   const plannedSources = selectedProfileOption?.orderedSources ?? [];
   const maxResults =
-    selectedProfileOption?.maxQualifiedResults ?? (isPrimaryProfile ? 5 : limit);
+    selectedProfileOption?.maxQualifiedResults ?? limit;
   const searchActivityStatus: SearchActivityStatus | null = isSearching
     ? "searching"
     : currentRun
@@ -161,14 +157,7 @@ export function JobRadar() {
     return () => controller.abort();
   }, [historyRefreshKey, selectedProfile]);
 
-  const visibleItems = useMemo(() => {
-    if (!currentRun) return [];
-    if (!isPrimaryProfile) return currentRun.items;
-
-    return currentRun.items.filter(
-      (item) => item.isNew && item.classification.eligible === true,
-    );
-  }, [currentRun, isPrimaryProfile]);
+  const visibleItems = currentRun?.items ?? [];
 
   const currentCards = useMemo(
     () =>
@@ -195,14 +184,6 @@ export function JobRadar() {
     [currentCards, excludedCards],
   );
 
-  const groupedCards = useMemo(
-    () => ({
-      promising: currentCards.filter((item) => item.verdict === "promising"),
-      maybe: currentCards.filter((item) => item.verdict === "maybe"),
-      reject: currentCards.filter((item) => item.verdict === "reject"),
-    }),
-    [currentCards],
-  );
 
   const directLinks = useMemo(
     () =>
@@ -251,7 +232,7 @@ export function JobRadar() {
     try {
       const run = await runRadar({
         profileId: selectedProfile,
-        limit: isPrimaryProfile ? 25 : limit,
+        limit,
       });
 
       if (run.profileId !== selectedProfile) {
@@ -365,7 +346,7 @@ export function JobRadar() {
               Búsqueda manual de oportunidades
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">
-              Elige un perfil y comienza la búsqueda cuando estés lista.
+              Perfil activo: {selectedProfileOption?.label ?? selectedProfile}. El historial y tus respuestas se mantienen separados por perfil.
             </p>
           </div>
 
@@ -389,30 +370,25 @@ export function JobRadar() {
               </select>
             </label>
 
-            {isPrimaryProfile ? (
-              <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm leading-5 text-sky-950">
-                Se revisarán las fuentes configuradas y se mostrarán hasta cinco oportunidades nuevas verificadas.
-              </p>
-            ) : (
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                Límite
-                <select
-                  className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-                  disabled={isSearching}
-                  onChange={(event) => {
-                    const nextLimit = parseLimit(event.target.value);
-                    if (nextLimit) setLimit(nextLimit);
-                  }}
-                  value={limit}
-                >
-                  {limitOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              Limite
+              <select
+                className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                disabled={isSearching}
+                onChange={(event) => {
+                  const nextLimit = parseLimit(event.target.value);
+                  if (nextLimit) setLimit(nextLimit);
+                }}
+                value={limit}
+              >
+                {limitOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
 
             <button
               aria-busy={isSearching}
@@ -481,25 +457,13 @@ export function JobRadar() {
                   </p>
                 ) : null}
               </div>
-            ) : isPrimaryProfile ? (
+            ) : (
               <OpportunityGroup
                 onSaveFeedback={handleSaveFeedback}
                 opportunities={currentCards}
                 saveStates={feedbackSaveStates}
                 title="Oportunidades nuevas verificadas"
               />
-            ) : (
-              <div className="space-y-7">
-                {verdictOrder.map((verdict) => (
-                  <OpportunityGroup
-                    key={verdict}
-                    onSaveFeedback={handleSaveFeedback}
-                    opportunities={groupedCards[verdict]}
-                    saveStates={feedbackSaveStates}
-                    title={verdictLabels[verdict]}
-                  />
-                ))}
-              </div>
             )}
 
             <ExcludedResultsPanel
