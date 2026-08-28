@@ -110,8 +110,8 @@ export function OpportunityCard({
         title={isDeleting ? "Ocultando..." : "Ocultar oportunidad"}
         type="button"
       >
-        <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24">
-          <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 11v5m4-5v5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        <svg aria-hidden="true" className="size-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm4 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z" />
         </svg>
       </button>
     </article>

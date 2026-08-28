@@ -52,6 +52,12 @@ function parseLimit(value: string): LimitOption | undefined {
   return undefined;
 }
 
+const PETER_PROFILE_ID = "peter-latam-remote-ai-fullstack-product";
+
+function defaultLimitForProfile(profileId: string): LimitOption {
+  return profileId === PETER_PROFILE_ID ? 50 : 25;
+}
+
 function emptySearchMessage(run: RadarRunResponse): string {
   if (run.totalQualified === 0) {
     return "No encontramos vacantes que cumplan todos los filtros obligatorios.";
@@ -68,7 +74,9 @@ export function JobRadar() {
   const [profiles, setProfiles] = useState<ProfileOption[]>(fallbackProfiles);
   const [profileLoadError, setProfileLoadError] = useState<RequestError | null>(null);
   const [selectedProfile, setSelectedProfile] = useState(defaultProfileId);
-  const [limit, setLimit] = useState<LimitOption>(25);
+  const [limit, setLimit] = useState<LimitOption>(() =>
+    defaultLimitForProfile(defaultProfileId),
+  );
   const [currentRun, setCurrentRun] = useState<RadarRunResponse | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -212,6 +220,7 @@ export function JobRadar() {
     if (nextProfileId === selectedProfile) return;
 
     setSelectedProfile(nextProfileId);
+    setLimit(defaultLimitForProfile(nextProfileId));
     setCurrentRun(null);
     setHasSearched(false);
     setSearchError(null);
