@@ -20,12 +20,9 @@ export function OpportunityCard({
   isDeleting,
   onSoftDelete,
 }: OpportunityCardProps) {
-  const hasSeparateOriginalUrl =
-    opportunity.originalUrl && opportunity.applicationUrl !== opportunity.originalUrl;
-
   return (
-    <article className="relative flex h-full min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <article className="relative flex h-36 min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex max-h-11 flex-wrap items-center gap-1.5 overflow-hidden">
         {opportunity.verdict ? (
           <span
             className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-4 ${verdictStyles[opportunity.verdict]}`}
@@ -75,32 +72,12 @@ export function OpportunityCard({
           )}
         </h3>
         {opportunity.companyName || opportunity.locationText ? (
-          <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-slate-600">
+          <div className="mt-0.5 flex min-w-0 gap-x-2 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-slate-600">
             {opportunity.companyName ? <span>{opportunity.companyName}</span> : null}
             {opportunity.locationText ? <span>{opportunity.locationText}</span> : null}
           </div>
         ) : null}
       </div>
-
-      {!opportunity.applicationUrl || hasSeparateOriginalUrl ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {!opportunity.applicationUrl ? (
-            <span className="text-xs font-medium text-amber-800">
-              Sin enlace verificado.
-            </span>
-          ) : null}
-          {hasSeparateOriginalUrl ? (
-            <a
-              className="text-xs font-semibold text-teal-800 underline underline-offset-2 hover:text-teal-950"
-              href={opportunity.originalUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Abrir oferta
-            </a>
-          ) : null}
-        </div>
-      ) : null}
 
       <button
         aria-label="Ocultar oportunidad"
