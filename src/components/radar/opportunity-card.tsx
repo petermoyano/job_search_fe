@@ -24,7 +24,7 @@ export function OpportunityCard({
     opportunity.originalUrl && opportunity.applicationUrl !== opportunity.originalUrl;
 
   return (
-    <article className="flex flex-col gap-2.5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
+    <article className="relative flex h-full min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-wrap items-center gap-1.5">
         {opportunity.verdict ? (
           <span
@@ -83,15 +83,15 @@ export function OpportunityCard({
       </div>
 
       {!opportunity.applicationUrl || hasSeparateOriginalUrl ? (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {!opportunity.applicationUrl ? (
             <span className="text-xs font-medium text-amber-800">
-              No hay un enlace de postulación verificado.
+              Sin enlace verificado.
             </span>
           ) : null}
           {hasSeparateOriginalUrl ? (
             <a
-              className="inline-flex min-h-8 items-center rounded-md border border-teal-700 px-2.5 py-1 text-xs font-semibold text-teal-800 transition hover:bg-teal-50"
+              className="text-xs font-semibold text-teal-800 underline underline-offset-2 hover:text-teal-950"
               href={opportunity.originalUrl}
               rel="noopener noreferrer"
               target="_blank"
@@ -102,17 +102,18 @@ export function OpportunityCard({
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <button
-          aria-label={`Ocultar ${opportunity.title}`}
-          className="min-h-8 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-400"
-          disabled={isDeleting}
-          onClick={() => onSoftDelete(opportunity)}
-          type="button"
-        >
-          {isDeleting ? "Ocultando…" : "Ocultar"}
-        </button>
-      </div>
+      <button
+        aria-label="Ocultar oportunidad"
+        className="absolute bottom-2.5 right-2.5 inline-flex size-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-400"
+        disabled={isDeleting}
+        onClick={() => onSoftDelete(opportunity)}
+        title={isDeleting ? "Ocultando..." : "Ocultar oportunidad"}
+        type="button"
+      >
+        <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24">
+          <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 11v5m4-5v5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        </svg>
+      </button>
     </article>
   );
 }
