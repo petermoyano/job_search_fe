@@ -20,6 +20,8 @@ import {
   getHistory,
   getProfiles,
   runRadar,
+  reviewSearchRun,
+
   softDeleteOpportunity,
   toRequestError,
 } from "@/lib/radar/api";
@@ -32,6 +34,8 @@ import {
 import type {
   HistoryOpportunity,
   OpportunityCardModel,
+  SearchRunReview,
+
   ProfileOption,
   RadarRunResponse,
   RequestError,
@@ -78,6 +82,10 @@ export function JobRadar() {
     defaultLimitForProfile(defaultProfileId),
   );
   const [currentRun, setCurrentRun] = useState<RadarRunResponse | null>(null);
+  const [searchRunReview, setSearchRunReview] = useState<SearchRunReview | null>(null);
+  const [isSearchRunReviewing, setIsSearchRunReviewing] = useState(false);
+  const [searchRunReviewError, setSearchRunReviewError] = useState<RequestError | null>(null);
+
   const [qualityReviewEnabled, setQualityReviewEnabled] = useState(true);
   const [qualityReviewEnabledForCurrentRun, setQualityReviewEnabledForCurrentRun] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -281,6 +289,10 @@ export function JobRadar() {
     setSelectedProfile(nextProfileId);
     setLimit(defaultLimitForProfile(nextProfileId));
     setCurrentRun(null);
+    setSearchRunReview(null);
+    setIsSearchRunReviewing(false);
+    setSearchRunReviewError(null);
+
     setQualityReviewEnabledForCurrentRun(false);
     setHasSearched(false);
     setSearchError(null);
@@ -302,6 +314,10 @@ export function JobRadar() {
     setIsSearching(true);
     setSearchError(null);
     setCurrentRun(null);
+    setSearchRunReview(null);
+    setIsSearchRunReviewing(false);
+    setSearchRunReviewError(null);
+
     setQualityReviewEnabledForCurrentRun(false);
     setSearchTiming({ startedAt: Date.now() });
     setCopyStatus("idle");
@@ -332,6 +348,27 @@ export function JobRadar() {
       );
     }
   }
+
+  async function handleSearchRunReview() {
+    if (!currentRun || isSearchRunReviewing) return;
+
+    const runId = currentRun.runId;
+    const profileId = currentRun.profileId;
+    setIsSearchRunReviewing(true);
+    setSearchRunReviewError(null);
+
+    try {
+      const review = await reviewSearchRun(runId, profileId);
+      setSearchRunReview(review);
+    } catch (error) {
+      setSearchRunReviewError(
+        toRequestError(error, "No pudimos generar la revision de la busqueda."),
+      );
+    } finally {
+      setIsSearchRunReviewing(false);
+    }
+  }
+
 
   async function handleSoftDelete(opportunity: OpportunityCardModel) {
     if (deletingOpportunityIds.has(opportunity.id)) return;
@@ -523,6 +560,100 @@ export function JobRadar() {
         {currentRun ? (
           <div className="space-y-7">
             <ResultsSummary run={currentRun} />
+
+            <section
+              aria-busy={isSearchRunReviewing}
+              className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-slate-800"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="font-semibold text-slate-950">
+                    Revision de alineacion de la busqueda
+                  </h2>
+                  <p className="mt-1 max-w-2xl leading-6 text-slate-600">
+                    Genera una lectura puntual para desarrolladores sobre este resultado
+                    frente al perfil. No se guarda y no cambia las oportunidades.
+                  </p>
+                </div>
+                <button
+                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-sky-700 bg-white px-4 py-2 font-semibold text-sky-800 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                  disabled={isSearchRunReviewing}
+                  onClick={handleSearchRunReview}
+                  type="button"
+                >
+                  {isSearchRunReviewing
+                    ? "Analizando..."
+                    : searchRunReview
+                      ? "Analizar de nuevo"
+                      : "Analizar alineacion"}
+                </button>
+              </div>
+
+              {searchRunReviewError ? (
+                <div className="mt-4">
+                  <ErrorNotice error={searchRunReviewError} />
+                </div>
+              ) : null}
+
+              {searchRunReview ? (
+                <div className="mt-4 space-y-4 border-t border-sky-200 pt-4">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <p className="text-lg font-semibold text-slate-950">
+                      Alineacion: {searchRunReview.alignmentScore}/100
+                    </p>
+                    <p className="font-medium text-sky-900">
+                      {searchRunReview.assessment === "strong"
+                        ? "Fuerte"
+                        : searchRunReview.assessment === "mixed"
+                          ? "Mixta"
+                          : "Debil"}
+                    </p>
+                  </div>
+                  <p className="leading-6">{searchRunReview.summary}</p>
+
+                  {searchRunReview.strengths.length > 0 ? (
+                    <div>
+                      <h3 className="font-semibold text-slate-950">Fortalezas</h3>
+                      <ul className="mt-1 list-disc space-y-1 pl-5">
+                        {searchRunReview.strengths.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {searchRunReview.gaps.length > 0 ? (
+                    <div>
+                      <h3 className="font-semibold text-slate-950">Brechas</h3>
+                      <ul className="mt-1 list-disc space-y-1 pl-5">
+                        {searchRunReview.gaps.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <h3 className="font-semibold text-slate-950">Proximos experimentos</h3>
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      {searchRunReview.recommendations.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-slate-950">Evidencia</h3>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">
+                      {searchRunReview.evidence.map((item) => (
+                        <li key={item.source + item.detail}>{item.detail}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
 
             {currentRun.invalidItemCount > 0 ? (
               <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">

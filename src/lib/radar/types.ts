@@ -216,6 +216,24 @@ export type RadarRunResponse = {
   sourceSummaries: SourceSummary[];
   invalidItemCount: number;
 };
+export type SearchRunReviewAssessment = "strong" | "mixed" | "weak";
+
+export type SearchRunReviewEvidence = {
+  source: "profile" | "run_summary" | "source_summary" | "opportunity";
+  detail: string;
+};
+
+export type SearchRunReview = {
+  alignmentScore: number;
+  assessment: SearchRunReviewAssessment;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  recommendations: string[];
+  evidence: SearchRunReviewEvidence[];
+};
+
+
 
 export type HistoryEvaluation = {
   verdict: Verdict;

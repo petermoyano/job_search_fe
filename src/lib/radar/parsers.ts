@@ -14,6 +14,9 @@ import type {
   QualityReview,
   QualityReviewEvidence,
   QualityReviewStatus,
+  SearchRunReview,
+  SearchRunReviewEvidence,
+
   RadarProfileConfig,
   ProfileSource,
   RadarCandidate,
@@ -573,6 +576,68 @@ function parseQualityReview(value: unknown, path: string): QualityReview {
     completedAt: optionalString(record.completed_at, `${path}.completed_at`),
   };
 }
+
+function parseSearchRunReviewAssessment(
+  value: unknown,
+  path: string,
+): SearchRunReview["assessment"] {
+  switch (value) {
+    case "strong":
+    case "mixed":
+    case "weak":
+      return value;
+    default:
+      throw new RadarContractError(path + " contains an unknown search-review assessment.");
+  }
+}
+
+function parseSearchRunReviewEvidence(
+  value: unknown,
+  path: string,
+): SearchRunReviewEvidence {
+  const record = requireRecord(value, path);
+  const source = requireString(record.source, path + ".source");
+
+  if (
+    source !== "profile" &&
+    source !== "run_summary" &&
+    source !== "source_summary" &&
+    source !== "opportunity"
+  ) {
+    throw new RadarContractError(path + ".source contains an unknown source.");
+  }
+
+  return {
+    source,
+    detail: requireString(record.detail, path + ".detail"),
+  };
+}
+
+export function parseSearchRunReview(value: unknown): SearchRunReview {
+  const record = requireRecord(value, "search_run_review");
+  return {
+    alignmentScore: requireNumber(record.alignment_score, "search_run_review.alignment_score"),
+    assessment: parseSearchRunReviewAssessment(
+      record.assessment,
+      "search_run_review.assessment",
+    ),
+    summary: requireString(record.summary, "search_run_review.summary"),
+    strengths: readStringArray(record.strengths, "search_run_review.strengths"),
+    gaps: readStringArray(record.gaps, "search_run_review.gaps"),
+    recommendations: readStringArray(
+      record.recommendations,
+      "search_run_review.recommendations",
+    ),
+    evidence: requireArray(record.evidence, "search_run_review.evidence").map(
+      (item, index) =>
+        parseSearchRunReviewEvidence(
+          item,
+          "search_run_review.evidence[" + index + "]",
+        ),
+    ),
+  };
+}
+
 
 
 function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportunity {

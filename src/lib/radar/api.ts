@@ -4,6 +4,8 @@ import {
   parseProfileConfigDocument,
   parseProfiles,
   parseRadarRun,
+  parseSearchRunReview,
+
 } from "./parsers";
 import type {
   FeedbackInput,
@@ -11,6 +13,8 @@ import type {
   OpportunityFeedback,
   ProfileConfigDocument,
   ProfileOption,
+  SearchRunReview,
+
   RadarProfileConfig,
   RadarRunResponse,
   RequestError,
@@ -234,6 +238,21 @@ export function runRadar(input: {
     },
   });
 }
+
+export function reviewSearchRun(
+  runId: string,
+  profileId: string,
+): Promise<SearchRunReview> {
+  return requestJson(
+    "/radar/runs/" + encodeURIComponent(runId) + "/search-review",
+    parseSearchRunReview,
+    {
+      method: "POST",
+      body: { profile_id: profileId },
+    },
+  );
+}
+
 
 export function saveOpportunityFeedback(
   opportunityId: string,
