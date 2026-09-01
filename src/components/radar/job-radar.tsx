@@ -176,7 +176,7 @@ export function JobRadar() {
 
     let cancelled = false;
     let attempts = 0;
-    let timeout: ReturnType<typeof window.setTimeout> | undefined;
+    let timeout: number | undefined;
     let controller: AbortController | undefined;
 
     const refreshReviews = () => {
