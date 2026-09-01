@@ -1,7 +1,7 @@
 "use client";
 
 import { verdictBadgeLabels } from "@/lib/radar/presentation";
-import type { OpportunityCardModel, Verdict } from "@/lib/radar/types";
+import type { OpportunityCardModel, QualityReview, Verdict } from "@/lib/radar/types";
 
 type OpportunityCardProps = {
   opportunity: OpportunityCardModel;
@@ -20,9 +20,10 @@ export function OpportunityCard({
   isDeleting,
   onSoftDelete,
 }: OpportunityCardProps) {
+  const qualityReview: QualityReview | undefined = opportunity.qualityReview;
   return (
-    <article className="relative flex h-36 min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex max-h-11 flex-wrap items-center gap-1.5 overflow-hidden">
+    <article className="relative flex min-h-36 min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex flex-wrap items-center gap-1.5">
         {opportunity.verdict ? (
           <span
             className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-4 ${verdictStyles[opportunity.verdict]}`}
@@ -54,6 +55,21 @@ export function OpportunityCard({
             Tier {opportunity.roleTier}
           </span>
         ) : null}
+        {qualityReview ? (
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-4 ${
+              qualityReview.status === "completed" && qualityReview.verdict === "down"
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : qualityReview.status === "completed"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-sky-200 bg-sky-50 text-sky-800"
+            }`}
+          >
+            {qualityReview.status === "completed"
+              ? `Revision ${qualityReview.qualityScore ?? "-"}`
+              : "Revisor: analizando..."}
+          </span>
+        ) : null}
       </div>
 
       <div className="min-w-0">
@@ -78,6 +94,25 @@ export function OpportunityCard({
           </div>
         ) : null}
       </div>
+      {qualityReview?.status === "completed" ? (
+        <details className="rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5 text-xs text-slate-700">
+          <summary className="cursor-pointer font-semibold text-teal-800">
+            Ver revision de calidad
+          </summary>
+          <div className="mt-2 space-y-2 leading-5">
+            {typeof qualityReview.confidence === "number" ? (
+              <p>Confianza: {Math.round(qualityReview.confidence * 100)}%</p>
+            ) : null}
+            {qualityReview.rationale.length > 0 ? (
+              <p><span className="font-medium">Motivos: </span>{qualityReview.rationale.join(" ")}</p>
+            ) : null}
+            {qualityReview.risks.length > 0 ? (
+              <p><span className="font-medium">Riesgos: </span>{qualityReview.risks.join(" ")}</p>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
+
 
       <button
         aria-label="Ocultar oportunidad"

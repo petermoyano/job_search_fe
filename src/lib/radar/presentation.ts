@@ -4,6 +4,7 @@ import type {
   FeedbackReasonCode,
   HistoryOpportunity,
   OpportunityCardModel,
+  QualityReview,
   RadarRunItem,
   Verdict,
 } from "./types";
@@ -218,6 +219,7 @@ export function currentOpportunityToCard(
   item: RadarRunItem,
   profileId: string,
   presented = true,
+  qualityReview?: QualityReview,
 ): OpportunityCardModel {
   const originalUrl = item.candidate.url ?? item.candidate.canonicalUrl;
   return {
@@ -246,6 +248,7 @@ export function currentOpportunityToCard(
       originalUrl,
     originalUrl,
     feedback: item.feedback,
+    qualityReview,
   };
 }
 
@@ -272,6 +275,7 @@ export function historyOpportunityToCard(
     applicationUrl: item.facts.applicationUrl ?? item.canonicalUrl,
     originalUrl: item.canonicalUrl,
     feedback: item.feedback,
+    qualityReview: item.qualityReview,
   };
 }
 

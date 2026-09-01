@@ -228,6 +228,28 @@ export type HistoryEvaluation = {
   reasons: string[];
 };
 
+export type QualityReviewStatus = "pending" | "processing" | "completed";
+
+export type QualityReviewVerdict = "up" | "down";
+
+export type QualityReviewEvidence = {
+  source: "job_text" | "facts" | "eligibility_checks" | "profile";
+  detail: string;
+};
+
+export type QualityReview = {
+  id: string;
+  status: QualityReviewStatus;
+  verdict?: QualityReviewVerdict;
+  qualityScore?: number;
+  confidence?: number;
+  rationale: string[];
+  risks: string[];
+  evidence: QualityReviewEvidence[];
+  rubricVersion: string;
+  completedAt?: string;
+};
+
 export type HistoryOpportunity = {
   id: string;
   profileId: string;
@@ -246,6 +268,7 @@ export type HistoryOpportunity = {
   lastPresentedAt?: string;
   latestEvaluation?: HistoryEvaluation;
   feedback?: OpportunityFeedback;
+  qualityReview?: QualityReview;
 };
 
 export type FeedbackInput = {
@@ -275,6 +298,7 @@ export type OpportunityCardModel = {
   applicationUrl?: string;
   originalUrl?: string;
   feedback?: OpportunityFeedback;
+  qualityReview?: QualityReview;
 };
 
 export type RequestError = {

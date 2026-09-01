@@ -11,6 +11,9 @@ import type {
   OpportunityFeedback,
   ProfileConfigDocument,
   ProfileOption,
+  QualityReview,
+  QualityReviewEvidence,
+  QualityReviewStatus,
   RadarProfileConfig,
   ProfileSource,
   RadarCandidate,
@@ -506,6 +509,72 @@ function parseHistoryEvaluation(value: unknown, path: string): HistoryEvaluation
   };
 }
 
+function parseQualityReviewStatus(value: unknown, path: string): QualityReviewStatus {
+  switch (value) {
+    case "pending":
+    case "processing":
+    case "completed":
+      return value;
+    default:
+      throw new RadarContractError(`${path} contiene un estado de revisión desconocido.`);
+  }
+}
+
+function parseQualityReviewVerdict(
+  value: unknown,
+  path: string,
+): QualityReview["verdict"] {
+  if (value === undefined || value === null) return undefined;
+
+  if (value === "up" || value === "down") return value;
+  throw new RadarContractError(`${path} contiene un veredicto de revisión desconocido.`);
+}
+
+function parseQualityReviewEvidence(
+  value: unknown,
+  path: string,
+): QualityReviewEvidence {
+  const record = requireRecord(value, path);
+  const source = requireString(record.source, `${path}.source`);
+
+  if (
+    source !== "job_text" &&
+    source !== "facts" &&
+    source !== "eligibility_checks" &&
+    source !== "profile"
+  ) {
+    throw new RadarContractError(`${path}.source contiene una fuente desconocida.`);
+  }
+
+  return {
+    source,
+    detail: requireString(record.detail, `${path}.detail`),
+  };
+}
+
+function parseQualityReview(value: unknown, path: string): QualityReview {
+  const record = requireRecord(value, path);
+  return {
+    id: requireString(record.id, `${path}.id`),
+    status: parseQualityReviewStatus(record.status, `${path}.status`),
+    verdict: parseQualityReviewVerdict(record.verdict, `${path}.verdict`),
+    qualityScore: optionalNumber(record.quality_score, `${path}.quality_score`),
+    confidence: optionalNumber(record.confidence, `${path}.confidence`),
+    rationale:
+      record.rationale === undefined ? [] : readStringArray(record.rationale, `${path}.rationale`),
+    risks: record.risks === undefined ? [] : readStringArray(record.risks, `${path}.risks`),
+    evidence:
+      record.evidence === undefined
+        ? []
+        : requireArray(record.evidence, `${path}.evidence`).map((item, index) =>
+            parseQualityReviewEvidence(item, `${path}.evidence[${index}]`),
+          ),
+    rubricVersion: requireString(record.rubric_version, `${path}.rubric_version`),
+    completedAt: optionalString(record.completed_at, `${path}.completed_at`),
+  };
+}
+
+
 function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportunity {
   const record = requireRecord(value, path);
   const id = requireString(record.id, `${path}.id`);
@@ -544,6 +613,10 @@ function parseHistoryOpportunity(value: unknown, path: string): HistoryOpportuni
         ? undefined
         : parseHistoryEvaluation(record.latest_evaluation, `${path}.latest_evaluation`),
     feedback,
+    qualityReview:
+      record.quality_review === undefined || record.quality_review === null
+        ? undefined
+        : parseQualityReview(record.quality_review, `${path}.quality_review`),
   };
 }
 

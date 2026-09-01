@@ -222,6 +222,7 @@ export function softDeleteOpportunity(
 export function runRadar(input: {
   profileId: string;
   limit: number;
+  enableQualityReview: boolean;
 }): Promise<RadarRunResponse> {
   return requestJson("/radar/runs", parseRadarRun, {
     method: "POST",
@@ -229,6 +230,7 @@ export function runRadar(input: {
       profile_id: input.profileId,
       source: "configured",
       limit: input.limit,
+      enable_quality_review: input.enableQualityReview,
     },
   });
 }

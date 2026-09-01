@@ -78,6 +78,8 @@ export function JobRadar() {
     defaultLimitForProfile(defaultProfileId),
   );
   const [currentRun, setCurrentRun] = useState<RadarRunResponse | null>(null);
+  const [qualityReviewEnabled, setQualityReviewEnabled] = useState(true);
+  const [qualityReviewEnabledForCurrentRun, setQualityReviewEnabledForCurrentRun] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<RequestError | null>(null);
@@ -166,6 +168,48 @@ export function JobRadar() {
 
     return () => controller.abort();
   }, [historyRefreshKey, selectedProfile]);
+  useEffect(() => {
+    if (!qualityReviewEnabledForCurrentRun || !currentRun) return;
+
+    const opportunityIds = currentRun.items.map((item) => item.opportunityId);
+    if (opportunityIds.length === 0) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timeout: ReturnType<typeof window.setTimeout> | undefined;
+    let controller: AbortController | undefined;
+
+    const refreshReviews = () => {
+      controller = new AbortController();
+      getHistory(selectedProfile, { limit: 200, signal: controller.signal })
+        .then((items) => {
+          if (cancelled) return;
+
+          setPresentedHistory(items);
+          const reviewsByOpportunity = new Map(
+            items.map((item) => [item.id, item.qualityReview]),
+          );
+          const waitingForReview = opportunityIds.some((id) => {
+            const review = reviewsByOpportunity.get(id);
+            return !review || review.status !== "completed";
+          });
+
+          attempts += 1;
+          if (waitingForReview && attempts < 10) {
+            timeout = window.setTimeout(refreshReviews, 3_000);
+          }
+        })
+        .catch(() => undefined);
+    };
+
+    timeout = window.setTimeout(refreshReviews, 1_500);
+    return () => {
+      cancelled = true;
+      controller?.abort();
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [currentRun, qualityReviewEnabledForCurrentRun, selectedProfile]);
+
 
   const visibleItems = (currentRun?.items ?? []).filter(
     (item) => !deletedOpportunityIds.has(item.opportunityId),
@@ -173,13 +217,28 @@ export function JobRadar() {
   const visibleExcludedItems = (currentRun?.excludedItems ?? []).filter(
     (item) => !deletedOpportunityIds.has(item.opportunityId),
   );
+  const qualityReviewsByOpportunity = useMemo(
+    () =>
+      new Map(
+        (presentedHistory ?? [])
+          .filter((item) => item.qualityReview !== undefined)
+          .map((item) => [item.id, item.qualityReview]),
+      ),
+    [presentedHistory],
+  );
+
 
   const currentCards = useMemo(
     () =>
       visibleItems.map((item) =>
-        currentOpportunityToCard(item, currentRun?.profileId ?? selectedProfile),
+        currentOpportunityToCard(
+          item,
+          currentRun?.profileId ?? selectedProfile,
+          true,
+          qualityReviewsByOpportunity.get(item.opportunityId),
+        ),
       ),
-    [currentRun?.profileId, selectedProfile, visibleItems],
+    [currentRun?.profileId, qualityReviewsByOpportunity, selectedProfile, visibleItems],
   );
 
   const excludedCards = useMemo(
@@ -222,6 +281,7 @@ export function JobRadar() {
     setSelectedProfile(nextProfileId);
     setLimit(defaultLimitForProfile(nextProfileId));
     setCurrentRun(null);
+    setQualityReviewEnabledForCurrentRun(false);
     setHasSearched(false);
     setSearchError(null);
     setSearchTiming(null);
@@ -242,6 +302,7 @@ export function JobRadar() {
     setIsSearching(true);
     setSearchError(null);
     setCurrentRun(null);
+    setQualityReviewEnabledForCurrentRun(false);
     setSearchTiming({ startedAt: Date.now() });
     setCopyStatus("idle");
 
@@ -249,6 +310,7 @@ export function JobRadar() {
       const run = await runRadar({
         profileId: selectedProfile,
         limit,
+        enableQualityReview: qualityReviewEnabled,
       });
 
       if (run.profileId !== selectedProfile) {
@@ -259,6 +321,7 @@ export function JobRadar() {
       }
 
       setCurrentRun(run);
+      setQualityReviewEnabledForCurrentRun(qualityReviewEnabled);
       setHistoryRefreshKey((value) => value + 1);
     } catch (error) {
       setSearchError(toRequestError(error, "No pudimos completar la búsqueda."));
@@ -341,7 +404,7 @@ export function JobRadar() {
           </div>
 
           <form
-            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,auto)_auto] lg:items-end"
+            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-end"
             onSubmit={handleSearch}
           >
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700">
@@ -378,6 +441,35 @@ export function JobRadar() {
                 ))}
               </select>
             </label>
+            <fieldset className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <legend>Revisor de calidad</legend>
+              <div className="flex h-11 items-center gap-3 rounded-md border border-slate-300 bg-white px-3 text-sm">
+                <label className="inline-flex items-center gap-1.5">
+                  <input
+                    checked={qualityReviewEnabled}
+                    disabled={isSearching}
+                    name="quality-review"
+                    onChange={() => setQualityReviewEnabled(true)}
+                    type="radio"
+                  />
+                  Activado
+                </label>
+                <label className="inline-flex items-center gap-1.5">
+                  <input
+                    checked={!qualityReviewEnabled}
+                    disabled={isSearching}
+                    name="quality-review"
+                    onChange={() => setQualityReviewEnabled(false)}
+                    type="radio"
+                  />
+                  No revisar
+                </label>
+              </div>
+              <p className="max-w-56 text-xs font-normal leading-4 text-slate-500">
+                Genera una revision asincrona para las oportunidades mostradas.
+              </p>
+            </fieldset>
+
 
 
             <button
