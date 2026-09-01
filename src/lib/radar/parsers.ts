@@ -516,7 +516,7 @@ function parseQualityReviewStatus(value: unknown, path: string): QualityReviewSt
     case "completed":
       return value;
     default:
-      throw new RadarContractError(`${path} contiene un estado de revisión desconocido.`);
+      throw new RadarContractError(`${path} contiene un estado de revisiÃ³n desconocido.`);
   }
 }
 
@@ -527,7 +527,7 @@ function parseQualityReviewVerdict(
   if (value === undefined || value === null) return undefined;
 
   if (value === "up" || value === "down") return value;
-  throw new RadarContractError(`${path} contiene un veredicto de revisión desconocido.`);
+  throw new RadarContractError(`${path} contiene un veredicto de revisiÃ³n desconocido.`);
 }
 
 function parseQualityReviewEvidence(
