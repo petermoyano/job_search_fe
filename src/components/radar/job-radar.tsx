@@ -445,12 +445,7 @@ export function JobRadar() {
           </div>
 
           <form
-            className={[
-              "grid gap-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:items-end",
-              isQualityReviewControlVisible
-                ? "lg:grid-cols-[minmax(0,1fr)_auto_minmax(13rem,auto)_auto]"
-                : "lg:grid-cols-[minmax(0,1fr)_auto_auto]",
-            ].join(" ")}
+            className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(13rem,auto)_auto] lg:items-end"
             onSubmit={handleSearch}
           >
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700">
