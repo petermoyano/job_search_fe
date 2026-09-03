@@ -324,6 +324,8 @@ export function translateStopReason(
       return "La fuente produjo suficientes resultados válidos.";
     case "sources_exhausted":
       return "Se revisaron todas las fuentes configuradas.";
+    case "time_budget_exhausted":
+      return "Se guardaron los resultados verificados antes del límite de tiempo.";
     default:
       return continuedToNext ? "Se continuó con la siguiente fuente." : undefined;
   }

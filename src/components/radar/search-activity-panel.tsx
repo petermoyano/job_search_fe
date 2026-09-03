@@ -5,6 +5,7 @@ import {
   acquisitionModeLabels,
   translateStopReason,
 } from "@/lib/radar/presentation";
+import { SearchSpinner } from "./search-spinner";
 import type { ProfileSource, RadarRunResponse } from "@/lib/radar/types";
 
 export type SearchActivityStatus = "searching" | "completed" | "failed";
@@ -53,7 +54,7 @@ function statusCopy(status: SearchActivityStatus) {
         title: "Buscando oportunidades",
         description: "Consultando, verificando y evaluando oportunidades.",
         symbol: "",
-        symbolClass: "bg-teal-600 motion-safe:animate-pulse",
+        symbolClass: "",
       };
   }
 }
@@ -84,21 +85,28 @@ export function SearchActivityPanel({
   const copy = statusCopy(status);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.45)]">
       <button
         aria-controls={contentId}
         aria-expanded={isOpen}
-        className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left sm:px-5"
+        className="flex w-full items-start justify-between gap-4 bg-slate-50/75 px-5 py-4 text-left transition hover:bg-slate-50 sm:px-6"
         onClick={() => setIsOpen((value) => !value)}
         type="button"
       >
         <span className="flex min-w-0 items-start gap-3">
-          <span
-            aria-hidden="true"
-            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold ${copy.symbolClass}`}
-          >
-            {copy.symbol}
-          </span>
+          {status === "searching" ? (
+            <SearchSpinner className="mt-0.5 h-6 w-6 text-teal-700" />
+          ) : (
+            <span
+              aria-hidden="true"
+              className={[
+                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                copy.symbolClass,
+              ].join(" ")}
+            >
+              {copy.symbol}
+            </span>
+          )}
           <span className="min-w-0">
             <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <span className="font-semibold text-slate-950">{copy.title}</span>
@@ -125,7 +133,7 @@ export function SearchActivityPanel({
       </p>
 
       {isOpen ? (
-        <div className="border-t border-slate-200 px-4 py-4 sm:px-5" id={contentId}>
+        <div className="border-t border-slate-200 px-5 py-5 sm:px-6" id={contentId}>
           {status === "searching" ? (
             <SearchingActivity
               elapsedSeconds={elapsedSeconds}
@@ -172,10 +180,7 @@ function SearchingActivity({
           <span>Solicitud enviada</span>
         </li>
         <li className="flex items-center gap-3 font-medium text-slate-950">
-          <span
-            aria-hidden="true"
-            className="h-3 w-3 shrink-0 rounded-full bg-teal-600 motion-safe:animate-pulse"
-          />
+          <SearchSpinner className="h-5 w-5 text-teal-700" />
           <span>Búsqueda y verificación en curso</span>
         </li>
       </ol>
@@ -196,6 +201,13 @@ function SearchingActivity({
       {waitingMessage ? (
         <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm leading-5 text-sky-950">
           {waitingMessage}
+        </p>
+      ) : null}
+
+      {plannedSources.length > 12 ? (
+        <p className="rounded-md border border-teal-100 bg-teal-50 px-3 py-2 text-sm leading-5 text-teal-950">
+          Para que la búsqueda no se interrumpa, los resultados verificados se
+          guardan antes del límite del servidor, incluso si quedan fuentes por revisar.
         </p>
       ) : null}
 

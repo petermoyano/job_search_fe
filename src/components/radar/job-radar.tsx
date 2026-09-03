@@ -6,6 +6,7 @@ import {
   SearchActivityPanel,
   type SearchActivityStatus,
 } from "./search-activity-panel";
+import { SearchSpinner } from "./search-spinner";
 import {
   DirectLinksList,
   ErrorNotice,
@@ -86,7 +87,8 @@ export function JobRadar() {
   const [isSearchRunReviewing, setIsSearchRunReviewing] = useState(false);
   const [searchRunReviewError, setSearchRunReviewError] = useState<RequestError | null>(null);
 
-  const [qualityReviewEnabled, setQualityReviewEnabled] = useState(true);
+  const [qualityReviewEnabled, setQualityReviewEnabled] = useState(false);
+  const [isQualityReviewControlVisible, setIsQualityReviewControlVisible] = useState(false);
   const [qualityReviewEnabledForCurrentRun, setQualityReviewEnabledForCurrentRun] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -294,6 +296,8 @@ export function JobRadar() {
     setSearchRunReviewError(null);
 
     setQualityReviewEnabledForCurrentRun(false);
+    setQualityReviewEnabled(false);
+    setIsQualityReviewControlVisible(false);
     setHasSearched(false);
     setSearchError(null);
     setSearchTiming(null);
@@ -422,32 +426,37 @@ export function JobRadar() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-6 sm:px-6 lg:px-8">
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <div className="mb-5 flex flex-col gap-2">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0fdfa_0,_#f8fafc_34rem)] text-slate-950">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_42px_-30px_rgba(15,23,42,0.5)] sm:p-7">
+          <div className="mb-7 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-medium uppercase text-teal-700">Job Radar</p>
-              <Link className="text-sm font-semibold text-teal-700 underline" href={"/mi-perfil/" + selectedProfile}>
+              <p className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-teal-800">Job Radar</p>
+              <Link className="rounded-md px-2 py-1 text-sm font-semibold text-teal-700 underline-offset-4 transition hover:bg-teal-50 hover:underline" href={"/mi-perfil/" + selectedProfile}>
                 Mi perfil
               </Link>
             </div>
-            <h1 className="text-2xl font-semibold text-slate-950 sm:text-3xl">
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
               Búsqueda manual de oportunidades
             </h1>
-            <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
               Perfil activo: {selectedProfileOption?.label ?? selectedProfile}. El historial y tus respuestas se mantienen separados por perfil.
             </p>
           </div>
 
           <form
-            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-end"
+            className={[
+              "grid gap-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:items-end",
+              isQualityReviewControlVisible
+                ? "lg:grid-cols-[minmax(0,1fr)_auto_minmax(13rem,auto)_auto]"
+                : "lg:grid-cols-[minmax(0,1fr)_auto_auto]",
+            ].join(" ")}
             onSubmit={handleSearch}
           >
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700">
               Perfil
               <select
-                className="h-11 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                className="h-11 min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-950 shadow-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                 disabled={isSearching}
                 onChange={(event) => handleProfileChange(event.target.value)}
                 value={selectedProfile}
@@ -463,7 +472,7 @@ export function JobRadar() {
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
               Limite
               <select
-                className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-950 shadow-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                 disabled={isSearching}
                 onChange={(event) => {
                   const nextLimit = parseLimit(event.target.value);
@@ -478,49 +487,63 @@ export function JobRadar() {
                 ))}
               </select>
             </label>
-            <fieldset className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              <legend>Revisor de calidad</legend>
-              <div className="flex h-11 items-center gap-3 rounded-md border border-slate-300 bg-white px-3 text-sm">
-                <label className="inline-flex items-center gap-1.5">
-                  <input
-                    checked={qualityReviewEnabled}
-                    disabled={isSearching}
-                    name="quality-review"
-                    onChange={() => setQualityReviewEnabled(true)}
-                    type="radio"
-                  />
-                  Activado
-                </label>
-                <label className="inline-flex items-center gap-1.5">
-                  <input
-                    checked={!qualityReviewEnabled}
-                    disabled={isSearching}
-                    name="quality-review"
-                    onChange={() => setQualityReviewEnabled(false)}
-                    type="radio"
-                  />
-                  No revisar
-                </label>
+            {isQualityReviewControlVisible ? (
+              <fieldset className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                <legend>Revisor de calidad</legend>
+                <div className="flex h-11 items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm">
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      checked={qualityReviewEnabled}
+                      disabled={isSearching}
+                      name="quality-review"
+                      onChange={() => setQualityReviewEnabled(true)}
+                      type="radio"
+                    />
+                    Activado
+                  </label>
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      checked={!qualityReviewEnabled}
+                      disabled={isSearching}
+                      name="quality-review"
+                      onChange={() => setQualityReviewEnabled(false)}
+                      type="radio"
+                    />
+                    No revisar
+                  </label>
+                </div>
+                <p className="max-w-56 text-xs font-normal leading-4 text-slate-500">
+                  Genera una revisión asíncrona para las oportunidades mostradas.
+                </p>
+              </fieldset>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium text-slate-700">Revisor de calidad</span>
+                <button
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-600 hover:text-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:text-slate-400"
+                  disabled={isSearching}
+                  onClick={() => setIsQualityReviewControlVisible(true)}
+                  type="button"
+                >
+                  Configurar revisión
+                </button>
+                <p className="max-w-56 text-xs leading-4 text-slate-500">
+                  Desactivado por defecto.
+                </p>
               </div>
-              <p className="max-w-56 text-xs font-normal leading-4 text-slate-500">
-                Genera una revision asincrona para las oportunidades mostradas.
-              </p>
-            </fieldset>
+            )}
 
 
 
             <button
               aria-busy={isSearching}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-teal-700 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-teal-700 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
               disabled={isSearching}
               type="submit"
             >
               {isSearching ? (
                 <>
-                  <span
-                    aria-hidden="true"
-                    className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white motion-safe:animate-spin"
-                  />
+                  <SearchSpinner className="h-5 w-5 text-white" />
                   <span>Buscando…</span>
                 </>
               ) : (
