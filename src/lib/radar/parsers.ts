@@ -417,16 +417,17 @@ export function parseProfiles(value: unknown): ProfileOption[] {
 export function parseProfileConfigDocument(value: unknown): ProfileConfigDocument {
   const record = requireRecord(value, "profile_config");
   const rawProfile = requireRecord(record.profile, "profile_config.profile");
-  const policy = requireRecord(
-    rawProfile.eligibility_policy,
-    "profile_config.profile.eligibility_policy",
-  );
 
   const profile = rawProfile as unknown as RadarProfileConfig;
   if (!Array.isArray(profile.role_tiers) || !Array.isArray(profile.ordered_sources)) {
     throw new RadarContractError("El perfil editable está incompleto.");
   }
-  if (!Array.isArray(policy.excluded_role_terms)) {
+  const rawPolicy = rawProfile.eligibility_policy;
+  if (
+    rawPolicy !== undefined &&
+    rawPolicy !== null &&
+    (!isRecord(rawPolicy) || !Array.isArray(rawPolicy.excluded_role_terms))
+  ) {
     throw new RadarContractError("La política de exclusiones está incompleta.");
   }
 
