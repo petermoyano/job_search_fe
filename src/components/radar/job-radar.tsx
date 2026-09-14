@@ -1,5 +1,7 @@
 "use client";
 
+import { SHOW_LLM_REVIEWS } from "@/lib/radar/features";
+
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
@@ -179,7 +181,7 @@ export function JobRadar() {
     return () => controller.abort();
   }, [historyRefreshKey, selectedProfile]);
   useEffect(() => {
-    if (!qualityReviewEnabledForCurrentRun || !currentRun) return;
+    if (!SHOW_LLM_REVIEWS || !qualityReviewEnabledForCurrentRun || !currentRun) return;
 
     const opportunityIds = currentRun.items.map((item) => item.opportunityId);
     if (opportunityIds.length === 0) return;
@@ -330,7 +332,7 @@ export function JobRadar() {
       const run = await runRadar({
         profileId: selectedProfile,
         limit,
-        enableQualityReview: qualityReviewEnabled,
+        enableQualityReview: SHOW_LLM_REVIEWS && qualityReviewEnabled,
       });
 
       if (run.profileId !== selectedProfile) {
@@ -341,7 +343,7 @@ export function JobRadar() {
       }
 
       setCurrentRun(run);
-      setQualityReviewEnabledForCurrentRun(qualityReviewEnabled);
+      setQualityReviewEnabledForCurrentRun(SHOW_LLM_REVIEWS && qualityReviewEnabled);
       setHistoryRefreshKey((value) => value + 1);
     } catch (error) {
       setSearchError(toRequestError(error, "No pudimos completar la búsqueda."));
@@ -354,7 +356,7 @@ export function JobRadar() {
   }
 
   async function handleSearchRunReview() {
-    if (!currentRun || isSearchRunReviewing) return;
+    if (!SHOW_LLM_REVIEWS || !currentRun || isSearchRunReviewing) return;
 
     const runId = currentRun.runId;
     const profileId = currentRun.profileId;
@@ -445,7 +447,7 @@ export function JobRadar() {
           </div>
 
           <form
-            className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(13rem,auto)_auto] lg:items-end"
+            className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end"
             onSubmit={handleSearch}
           >
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-700">
@@ -482,6 +484,8 @@ export function JobRadar() {
                 ))}
               </select>
             </label>
+            {SHOW_LLM_REVIEWS ? (
+              <>
             {isQualityReviewControlVisible ? (
               <fieldset className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                 <legend>Revisor de calidad</legend>
@@ -527,6 +531,8 @@ export function JobRadar() {
                 </p>
               </div>
             )}
+              </>
+            ) : null}
 
 
 
@@ -579,6 +585,7 @@ export function JobRadar() {
           <div className="space-y-7">
             <ResultsSummary run={currentRun} />
 
+            {SHOW_LLM_REVIEWS ? (
             <section
               aria-busy={isSearchRunReviewing}
               className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-slate-800"
@@ -671,6 +678,7 @@ export function JobRadar() {
                 </div>
               ) : null}
             </section>
+            ) : null}
 
 
             {currentRun.invalidItemCount > 0 ? (

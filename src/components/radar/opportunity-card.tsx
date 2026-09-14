@@ -1,5 +1,7 @@
 "use client";
 
+import { SHOW_LLM_REVIEWS } from "@/lib/radar/features";
+
 import { verdictBadgeLabels } from "@/lib/radar/presentation";
 import type { OpportunityCardModel, QualityReview, Verdict } from "@/lib/radar/types";
 
@@ -20,7 +22,7 @@ export function OpportunityCard({
   isDeleting,
   onSoftDelete,
 }: OpportunityCardProps) {
-  const qualityReview: QualityReview | undefined = opportunity.qualityReview;
+  const qualityReview: QualityReview | undefined = SHOW_LLM_REVIEWS ? opportunity.qualityReview : undefined;
   return (
     <article className="relative flex min-h-36 min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-wrap items-center gap-1.5">
