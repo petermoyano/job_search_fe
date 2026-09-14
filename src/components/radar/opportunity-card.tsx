@@ -24,7 +24,7 @@ export function OpportunityCard({
 }: OpportunityCardProps) {
   const qualityReview: QualityReview | undefined = SHOW_LLM_REVIEWS ? opportunity.qualityReview : undefined;
   return (
-    <article className="relative flex min-h-36 min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
+    <article className="relative flex min-w-0 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-2.5 pr-10 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex flex-wrap items-center gap-1.5">
         {opportunity.verdict ? (
           <span
@@ -118,7 +118,7 @@ export function OpportunityCard({
 
       <button
         aria-label="Ocultar oportunidad"
-        className="absolute bottom-2.5 right-2.5 inline-flex size-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-400"
+        className="absolute top-2.5 right-2.5 inline-flex size-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:text-slate-400"
         disabled={isDeleting}
         onClick={() => onSoftDelete(opportunity)}
         title={isDeleting ? "Ocultando..." : "Ocultar oportunidad"}
